@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<widget xmlns="http://wirecloud.conwet.fi.upm.es/ns/macdescription/1" vendor="WireCloud" name="workspace-browser" version="0.1.3">
+    <details>
+        <title>__MSG_displayName__</title>
+        <homepage>https://github.com/Wirecloud/workspace-browser-widget</homepage>
+        <authors>Álvaro Arranz &lt;aarranz@ficodes.com&gt;</authors>
+        <contributors>Kazuhito Suda</contributors>
+        <email>wirecloud@conwet.com</email>
+        <image></image>
+        <smartphoneimage></smartphoneimage>
+        <description>__MSG_description__</description>
+        <longdescription>DESCRIPTION.md</longdescription>
+        <changelog>doc/changelog.md</changelog>
+        <doc>doc/userguide.md</doc>
+        <license>Apache-2.0</license>
+        <issuetracker>https://github.com/Wirecloud/workspace-browser-widget/issues</issuetracker>
+    </details>
+
+    <requirements>
+        <feature name="StyledElements" />
+        <feature name="DashboardManagement" />
+    </requirements>
+
+    <contents src="index.html" useplatformstyle="true"/>
+    <rendering height="300px" width="30%"/>
+
+    <translations default="en">
+        <translation lang="es">
+            <msg name="displayName">Explorador de espacios de trabajo</msg>
+            <msg name="description">Explora y descubre los espacios de trabajo disponibles</msg>
+        </translation>
+        <translation lang="en">
+            <msg name="displayName">Workspace Browser</msg>
+            <msg name="description">Browse and discover the available workspaces</msg>
+        </translation>
+        <translation lang="ja">
+            <msg name="displayName">ワークスペース・ブラウザ</msg>
+            <msg name="description">利用可能なワークスペースをブラウズして見つけることができます</msg>
+        </translation>
+    </translations>
+
+</widget>

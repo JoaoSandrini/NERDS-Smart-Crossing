@@ -1,0 +1,34 @@
+services:
+  orion-proxy:
+    image: fiware/pep-proxy
+    env_file:
+      - ../.env
+    hostname: fiware-orion-proxy
+    container_name: wilma
+    deploy:
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "${ORION_PROXY_PORT}:${ORION_PROXY_PORT}" # localhost:1027
+    expose:
+      - "${ORION_PROXY_PORT}"
+    environment:
+      - DEBUG=pep-proxy:*
+      - PEP_PROXY_DEBUG=true
+      - PEP_PROXY_APP_HOST=orion
+      - PEP_PROXY_APP_PORT=${ORION_PORT}
+      - PEP_PROXY_PORT=${ORION_PROXY_PORT}
+      - PEP_PROXY_IDM_HOST=keyrock
+      - PEP_PROXY_HTTPS_ENABLED=false
+      - PEP_PROXY_AUTH_ENABLED=false
+      - PEP_PROXY_IDM_SSL_ENABLED=false
+      - PEP_PROXY_IDM_PORT=${KEYROCK_PORT}
+      - PEP_PROXY_APP_ID=tutorial-dckr-site-0000-xpresswebapp
+      - PEP_PROXY_USERNAME=pep_proxy_00000000-0000-0000-0000-000000000000
+      - PEP_PASSWORD=test
+      - PEP_PROXY_PDP=idm
+      - PEP_PROXY_MAGIC_KEY=1234
+      - PEP_PROXY_PUBLIC_PATHS=/version
+    healthcheck:
+      interval: 
+      

@@ -1,0 +1,59 @@
+services:
+
+  ld-context:
+    image: httpd:alpine
+    hostname: context
+    container_name: fiware-ld-context
+    ports:
+      - "3004:80"
+    volumes:
+      - ../data-models:/usr/local/apache2/htdocs/
+      - type: bind
+        source: ../conf/mime.types
+        target: /usr/local/apache2/conf/mime.types
+        read_only: true
+    healthcheck:
+      test: (wget --server-response --spider --quiet  http://context/user-context.jsonld 2>&1 | awk 'NR==1{print $$2}'|  grep -q -e "200") || exit 1
+
+
+  mongo-db:
+    image: mongo:3.6
+    env_file:
+      - ../.env
+    hostname: orion-mongo-db
+    container_name: orion-mongo-db
+    ports:
+      - ${MONGO_PORT}:${MONGO_PORT} 
+    command: --nojournal
+    volumes:
+      - mongo-db:/data
+    healthcheck:
+      test: ["CMD","mongosh", "localhost:27017/test", "--quiet"]
+      interval: 5s
+
+
+  orion:
+    image: fiware/orion-ld
+    env_file:
+      - ../.env
+    hostname: orion
+    container_name: orion
+    expose:
+      - ${ORION_PORT}
+    ports:
+      - ${ORION_PORT}:${ORION_PORT}
+    depends_on:
+      - mongo-db
+    command: -dbhost mongo-db -logLevel DEBUG
+
+
+
+volumes:
+  mongo-db: ~
+  data-models:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data-models
+

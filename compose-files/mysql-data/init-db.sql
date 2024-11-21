@@ -1,0 +1,3 @@
+CREATE USER 'root'@'%' IDENTIFIED BY 'secret';
+GRANT ALL ON *.* TO 'root'@'%';
+FLUSH PRIVILEGES;

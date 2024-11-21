@@ -1,0 +1,29 @@
+@import "variables";
+
+
+#workspace {
+    overflow: hidden;
+}
+
+#workspace.fullscreen {
+    width: 100%;
+    height: 100%;
+    background: white;
+}
+
+.wc-workspace-tab-content {
+    padding-left: $margin-horizontal-small;
+    padding-right: $margin-horizontal-small;
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    &.dragging {
+        cursor: -webkit-grabbing;
+        cursor: -moz-grabbing;
+        cursor: grabbing;
+    }
+}
+
+.wc-workspace-tab .disabled {
+    display: none;
+}
