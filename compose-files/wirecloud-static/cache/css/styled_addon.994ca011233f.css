@@ -1,0 +1,57 @@
+.se-add-on, .se-box {
+  display: inline-block;
+  width: auto;
+  min-width: 16px;
+  height: 34px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 20px;
+  text-align: center;
+  text-shadow: 0 1px 0 #ffffff;
+  border: 1px solid #dbdbdb;
+  vertical-align: middle;
+  box-sizing: border-box;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+
+  .se-add-on {
+    color: #333;
+    background-color: #eee; }
+
+    .se-box {
+      color: #333;
+      background-color: white; }
+
+      .input-prepend > .se-hl-west-container > .se-add-on:first-child {
+        border-radius: 4px 0 0 4px; }
+
+        .input-prepend > .se-hl-west-container > .se-add-on:last-child {
+          margin: 0 -1px 0 0; }
+
+          .input-append > .se-hl-east-container > .se-add-on:first-child {
+            margin: 0 0 0 -1px; }
+
+            .input-append > .se-hl-east-container > .se-add-on:last-child {
+              border-radius: 0 4px 4px 0; }
+
+              .btn-group-lg .se-add-on, .btn-group-lg .se-box, .se-input-group-lg .se-add-on,
+              .se-input-group-lg .se-box {
+                height: 42px;
+                font-size: 18px;
+                padding: 10px 16px;
+                border-radius: 6px; }
+
+                .btn-group-sm .se-add-on, .btn-group-sm .se-box, .se-input-group-sm .se-add-on,
+                .se-input-group-sm .se-box {
+                  height: 32px;
+                  font-size: 12px;
+                  padding: 5px 10px;
+                  border-radius: 3px; }
+
+                  .btn-group-xs .se-add-on, .btn-group-xs .se-box, .se-input-group-xs .se-add-on,
+                  .se-input-group-xs .se-box {
+                    height: 24px;
+                    font-size: 11px;
+                    padding: 1px 5px;
+                    border-radius: 3px; }

@@ -1,0 +1,49 @@
+.wc-upload-mac-modal .mac-package {
+  float: left;
+  margin-right: 12px; }
+
+  .wc-upload-mac-modal .window_content {
+    position: relative;
+    height: 300px;
+    padding: 0px; }
+
+    .wc-upload-mac-modal .wc-upload-mac-border {
+      position: absolute;
+      transition: 0.35s border ease-in;
+      border: 3px solid transparent;
+      box-sizing: border-box;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none; }
+
+      .wc-upload-mac-modal.drag-hover .wc-upload-mac-border {
+        border-color: #418cc8; }
+
+        .wc-upload-mac-message {
+          display: none;
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          padding: 15px; }
+
+          .wc-upload-mac-modal-empty .wc-upload-mac-message {
+            display: block; }
+
+            .wc-upload-mac-modal-empty .se-model-table {
+              visibility: hidden; }
+
+              .wc-upload-mac-title {
+                text-align: center;
+                font-size: 25px;
+                line-height: 36px; }
+
+                .wc-upload-mac-or {
+                  text-align: center;
+                  font-size: 21px;
+                  line-height: 36px; }
+
+                  .wc-upload-mac-button {
+                    text-align: center; }

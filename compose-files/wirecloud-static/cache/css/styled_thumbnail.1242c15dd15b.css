@@ -1,0 +1,37 @@
+.se-thumbnail {
+  position: relative;
+  display: block;
+  height: 180px;
+  line-height: 180px;
+  margin: 0 0 10px;
+  text-align: center;
+  border: 1px solid #dbdbdb;
+  border-radius: 4px; }
+  .se-thumbnail img {
+    position: relative;
+    display: inline-block;
+    max-height: 100%;
+    max-width: 100%;
+    border-radius: 3px;
+    top: 50%;
+    vertical-align: baseline;
+    -webkit-transform: translateY(-50%);
+    -moz-transform: translateY(-50%);
+    -ms-transform: translateY(-50%);
+    -o-transform: translateY(-50%);
+    transform: translateY(-50%); }
+
+.se-thumbnail-sm {
+  height: 100px;
+  line-height: 100px; }
+
+  .se-thumbnail-missing {
+    color: #5bc0de;
+    font-weight: bold;
+    font-size: 14px;
+    line-height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center; }
+    .se-thumbnail-missing img {
+      display: none; }

@@ -51,13 +51,17 @@ services:
             - elasticsearch
             - memcached
         environment:
-            - DEBUG=False
+            - DEBUG=True
             # - DEFAULT_THEME=wirecloud.defaulttheme
             - DB_HOST=postgres
             - DB_PASSWORD=wirepass   # Change this password!
             - FORWARDED_ALLOW_IPS=*
             - ELASTICSEARCH2_URL=http://elasticsearch:9200/
             - MEMCACHED_LOCATION=memcached:11211
+            - FIWARE_IDM_URL=http://localhost:3000
+            - FIWARE_IDM_SERVER=http://host.docker.internal:3000
+            - SOCIAL_AUTH_FIWARE_KEY=b6486dea-9157-4edb-94f9-e17eeb64597f  # Keyrock's OAuth2 client ID 
+            - SOCIAL_AUTH_FIWARE_SECRET=ee1b753d-cfa7-4e5f-847e-e1039030a7c4 # Keyrock's OAuth2 client Secret
             # Uncomment the following environment variables to enable IDM integration
             #- FIWARE_IDM_SERVER=${FIWARE_IDM_SERVER}
             #- SOCIAL_AUTH_FIWARE_KEY=${SOCIAL_AUTH_FIWARE_KEY}

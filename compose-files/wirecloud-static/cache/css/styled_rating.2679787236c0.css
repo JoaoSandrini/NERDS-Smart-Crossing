@@ -1,0 +1,16 @@
+.rating {
+  display: inline-block;
+  font-family: FontAwesome;
+  font-weight: normal;
+  font-style: normal; }
+
+  .rating > span {
+    margin: 2px;
+    display: inline-block;
+    vertical-align: middle; }
+    .rating > span.off {
+      color: #666; }
+      .rating > span.middle {
+        color: #418cc8; }
+        .rating > span.on {
+          color: #418cc8; }

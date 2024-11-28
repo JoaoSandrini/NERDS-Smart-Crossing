@@ -1,0 +1,99 @@
+body {
+  background: #FFF;
+  font-family: "Open Sans", sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  color: #333;
+  text-rendering: optimizeLegibility; }
+
+  h1, h2, h3, h4, h5, h6 {
+    margin: 10px 0;
+    font-family: inherit;
+    font-weight: bold;
+    line-height: 1.2;
+    color: inherit;
+    text-rendering: optimizelegibility; }
+
+    h1, h2, h3 {
+      margin-top: 20px;
+      margin-bottom: 10px; }
+
+      h4, h5, h6 {
+        margin-top: 10px;
+        margin-bottom: 10px; }
+
+        h1 {
+          font-size: 38px; }
+
+          h2 {
+            font-size: 31px; }
+
+            h3 {
+              font-size: 24px; }
+
+              h4 {
+                font-size: 17px; }
+
+                h5 {
+                  font-size: 14px; }
+
+                  h6 {
+                    font-size: 11px; }
+
+                    a, .se-link {
+                      color: #3278b4;
+                      text-decoration: none;
+                      cursor: pointer; }
+                      a:hover, a:focus, .se-link:hover, .se-link:focus {
+                        color: #215078;
+                        text-decoration: underline; }
+
+p {
+  position: relative;
+  display: block;
+  margin: 0 0 10px 0; }
+
+  .lead {
+    margin-bottom: 20px;
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 1.4; }
+    @media (min-width: 768px) {
+      .lead {
+        font-size: 21px;   }
+}
+
+ul, ol {
+  margin-top: 0;
+  margin-bottom: 10px; }
+  ul ul, ul ol, ol ul, ol ol {
+    margin-bottom: 0; }
+
+dl {
+  margin-top: 0;
+  margin-bottom: 20px; }
+
+  dl, dt {
+    line-height: 20px; }
+
+    dt {
+      font-weight: bold; }
+
+      dd {
+        margin-left: 0; }
+        dd > *:last-child {
+          margin-bottom: 0; }
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 700; }
+
+  blockquote {
+    padding: 0 10px;
+    margin: 0 0 10px;
+    font-size: 18px;
+    border-left: 4px solid #777; }
+    blockquote > *:last-child {
+      margin-bottom: 0; }

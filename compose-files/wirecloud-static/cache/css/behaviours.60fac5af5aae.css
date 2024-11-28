@@ -1,0 +1,30 @@
+.behaviour {
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none; }
+  .behaviour .behaviour-description {
+    max-height: 100px;
+    margin-bottom: 0px;
+    font-size: 11px;
+    line-height: 20px;
+    color: #46505a;
+    overflow: hidden; }
+
+.behaviour-title {
+  width: 75%;
+  float: left;
+  white-space: nowrap; }
+  .behaviour-title > span {
+    display: inline-block;
+    max-width: 100%; }
+
+.behaviour.temporal {
+  visibility: hidden; }
+
+  .behaviour.dragging {
+    position: absolute;
+    cursor: move;
+    top: 0;
+    left: 0;
+    z-index: 10; }

@@ -1,0 +1,24 @@
+.se-pills {
+  display: block;
+  margin: 0;
+  padding: 0;
+  list-style: none; }
+
+  .se-pill {
+    display: inline-block;
+    padding: 10px 15px;
+    box-sizing: border-box;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #418cc8;
+    margin-left: 2px; }
+    .se-pill:hover {
+      background-color: #eee; }
+      .se-pill.disabled {
+        color: #777; }
+        .se-pill.disabled:hover {
+          color: #777; }
+          .se-pill.active {
+            color: #FFF;
+            background-color: #418cc8;
+            cursor: default; }

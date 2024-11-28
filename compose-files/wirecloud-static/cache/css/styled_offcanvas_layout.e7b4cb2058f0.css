@@ -1,0 +1,42 @@
+.se-offcanvas {
+  position: absolute;
+  display: flex;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden; }
+
+  .se-offcanvas-sidebar {
+    position: relative;
+    width: 300px;
+    height: 100%;
+    margin: 0 0;
+    flex-shrink: 0;
+    box-sizing: border-box; }
+
+    .se-offcanvas-content {
+      position: relative;
+      height: 100%;
+      margin: 0;
+      flex-grow: 1;
+      flex-shrink: 1;
+      overflow: auto;
+      box-sizing: border-box; }
+
+      .se-offcanvas.left-sideway {
+        left: -310px;
+        transition: left 0.2s ease-out; }
+        .se-offcanvas.left-sideway.slipped {
+          left: 0; }
+          .se-offcanvas.left-sideway .se-offcanvas-sidebar {
+            margin-left: 5px;
+            margin-right: 5px; }
+
+.se-offcanvas.right-sideway {
+  right: -310px;
+  transition: right 0.2s ease-out; }
+  .se-offcanvas.right-sideway.slipped {
+    right: 0; }
+    .se-offcanvas.right-sideway .se-offcanvas-sidebar {
+      margin-right: 5px; }

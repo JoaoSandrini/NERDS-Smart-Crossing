@@ -1,0 +1,6 @@
+.dragboardcursor {
+  border-radius: 4px 4px 0 0;
+  background: #f0f9fc;
+  border: 2px dashed #46c4da;
+  position: absolute;
+  z-index: 0; }

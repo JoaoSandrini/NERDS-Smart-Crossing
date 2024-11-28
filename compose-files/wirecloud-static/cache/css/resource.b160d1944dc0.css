@@ -1,0 +1,85 @@
+.resource {
+  position: relative;
+  padding: 0;
+  display: inline-block;
+  margin: 6px;
+  vertical-align: middle;
+  height: 152px;
+  width: 317px;
+  text-align: left;
+  overflow: hidden;
+  transition: border linear 0.2s, box-shadow linear 0.2s, background linear 0.2s;
+  box-shadow: 0 0 8px rgba(50, 50, 50, 0.1);
+  cursor: pointer;
+  box-sizing: border-box; }
+  .resource > .panel-heading {
+    padding: 5px 5px; }
+    .resource > .description.text-truncate:after {
+      background-image: linear-gradient(to right, rgba(255, 255, 255, 0), #FFF);
+      height: 18px;
+      width: 70px; }
+
+.wc-resource-img-container {
+  width: 170px;
+  height: 80px;
+  position: absolute;
+  bottom: 0px;
+  left: 0px;
+  background: white;
+  border-radius: 0 3px;
+  text-align: center;
+  overflow: hidden; }
+
+  .wc-resource-img {
+    max-width: 170px;
+    max-height: 80px;
+    display: inline-block;
+    vertical-align: middle; }
+
+    .resource > .panel-heading > .rating {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      line-height: 26px; }
+
+      .resource > .panel-heading > .rating.disabled {
+        opacity: 0.1; }
+
+        .resource > .panel-heading > .rating > span {
+          margin: 0px 1px 0px; }
+
+          .resource > .panel-heading > .vendor {
+            font-size: 13px; }
+
+            .resource > .description {
+              position: absolute;
+              font-size: 12px;
+              line-height: 18px;
+              height: 72px;
+              overflow: hidden;
+              top: 70px;
+              left: 178px;
+              right: 8px; }
+
+              .resource > .panel-heading > .panel-title {
+                overflow: hidden;
+                white-space: nowrap;
+                font-size: 20px;
+                line-height: 26px; }
+                .resource > .panel-heading > .panel-title > span {
+                  max-width: 100%;
+                  display: inline-block;
+                  text-decoration: inherit; }
+
+.resource > .panel-heading > .label {
+  margin-left: 0px; }
+
+  .resource > .panel-heading > h2 {
+    margin: 0px;
+    font-size: 24px;
+    width: 192px; }
+
+    .resource .mainbutton {
+      clear: both;
+      float: right;
+      margin: 0px; }

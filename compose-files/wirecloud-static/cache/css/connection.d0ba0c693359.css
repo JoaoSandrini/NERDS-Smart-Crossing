@@ -1,0 +1,63 @@
+.connection {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none; }
+  .connection .connection-path {
+    cursor: pointer;
+    fill: none;
+    stroke-width: 6px; }
+
+.connection-options {
+  position: absolute;
+  -webkit-transform: translate(-50%, -50%);
+  -moz-transform: translate(-50%, -50%);
+  -ms-transform: translate(-50%, -50%);
+  -o-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%); }
+
+  .connection .connection-path {
+    stroke: rgba(63, 81, 181, 0.9); }
+    .connection.temporal .connection-path {
+      stroke: rgba(197, 202, 233, 0.9); }
+      .connection.background .connection-path {
+        stroke: rgba(232, 234, 246, 0.9); }
+        .connection.missing .connection-path, .connection.has-error .connection-path {
+          stroke: rgba(229, 115, 115, 0.9); }
+          .connection.missing.background .connection-path,
+          .connection.has-error.background .connection-path {
+            stroke: rgba(255, 235, 238, 0.9); }
+  .connection.active .connection-path, .connection.editable .connection-path,
+  .connection.incomplete .connection-path, .connection.highlighted .connection-path,
+  .connection.missing.active .connection-path,
+  .connection.missing.editable .connection-path,
+  .connection.missing.incomplete .connection-path,
+  .connection.missing.highlighted .connection-path,
+  .connection.has-error.active .connection-path,
+  .connection.has-error.editable .connection-path,
+  .connection.has-error.incomplete .connection-path,
+  .connection.has-error.highlighted .connection-path {
+    stroke: rgba(129, 212, 250, 0.9); }
+  .connection.editable .connection-path {
+    cursor: default; }
+    .connection.incomplete .connection-path {
+      cursor: -webkit-grabbing;
+      cursor: -moz-grabbing;
+      cursor: grabbing; }
+
+.we-connection-handle-line {
+  cursor: default;
+  fill: none;
+  stroke: #333;
+  stroke-width: 1px; }
+
+  .we-connection-handle-ball {
+    cursor: pointer;
+    fill: #418cc8;
+    stroke: #2b7096;
+    stroke-width: 1px; }
+    .we-connection-handle-ball:hover, .we-connection-handle-ball.active {
+      fill: #3072a6;
+      stroke: #3072a6; }
+
+.we-connection-handle.auto .we-connection-handle-line {
+  stroke-dasharray: 5; }

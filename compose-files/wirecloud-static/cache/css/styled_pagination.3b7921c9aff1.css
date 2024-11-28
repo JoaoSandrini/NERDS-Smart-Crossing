@@ -1,0 +1,14 @@
+.pagination {
+  font-size: 14px; }
+
+  .pagination .icon-first-page:before {
+    content: ""; }
+
+    .pagination .icon-last-page:before {
+      content: ""; }
+
+      .pagination .icon-prev-page:before {
+        content: ""; }
+
+        .pagination .icon-next-page:before {
+          content: ""; }

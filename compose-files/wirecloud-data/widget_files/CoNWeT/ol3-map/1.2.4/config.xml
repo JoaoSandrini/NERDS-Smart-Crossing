@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<widget xmlns="http://wirecloud.conwet.fi.upm.es/ns/macdescription/1" vendor="CoNWeT" name="ol3-map" version="1.2.4">
+    <details>
+        <title>OpenLayers Map</title>
+        <email>wirecloud@conwet.com</email>
+        <homepage>https://github.com/Wirecloud/ol3-map-widget</homepage>
+        <image>images/catalogue.png</image>
+        <description>Map viewer widget using OpenLayers.</description>
+        <doc>doc/userguide.md</doc>
+        <changelog>doc/changelog.md</changelog>
+        <authors>Álvaro Arranz &lt;aarranz@ficodes.com&gt;</authors>
+        <license>Apache License 2.0</license>
+        <licenseurl>http://www.apache.org/licenses/LICENSE-2.0.html</licenseurl>
+        <issuetracker>https://github.com/Wirecloud/ol3-map-widget/issues</issuetracker>
+    </details>
+
+    <requirements>
+        <feature name="DashboardManagement"/>
+        <feature name="StyledElements"/>
+    </requirements>
+
+    <preferences>
+        <preference name="initialCenter" type="text" label="Initial Location" description="Decimal coordinates where map will be centered on load (e.g. `52, 5`). Leave this setting empty if you don't want to center the map at init. Remember to change the initial zoom level if you provide an initial location." default="" />
+        <preference name="initialZoom" type="text" label="Initial Zoom Level" description="Initial zoom level. From 1 to 22, where '1' represents the furthest level and '22' the maximum zoom level." default="3" />
+        <preference name="minzoom" label="Min Zoom" type="text" description="" default="4" />
+        <preference name="poiZoom" label="PoI Zoom" type="text" description="Zoom level applied when centering a PoI" default="17" />
+        <preference name="layerswidget" label="Layers Widget" type="text" description="Widget to use for allowing user to switch between layers" default="" />
+        <preference name="useclustering" label="Use Clustering" type="boolean" description="Mark this option to use clustering for displaying map features" default="false" />
+    </preferences>
+
+    <wiring>
+        <inputendpoint name="layerInfo" type="text" label="Layer Info" description="Add or remove layers to the map, in addition to changing its base layer." actionlabel="Update Layers" friendcode="ol-layer-command wms-layer-command"/>
+        <inputendpoint name="poiInput" type="text" label="Insert/Update PoI" description="Insert or update a Point of Interest." actionlabel="Map Viewer Insert/Update PoI" friendcode="poi poi-list"/>
+        <inputendpoint name="poiInputCenter" type="text" label="Center PoI" description="Insert or update a Point of Interest and center the map on it." actionlabel="Center" friendcode="poi poi-list poi-id-list" />
+        <inputendpoint name="deletePoiInput" type="text" label="Delete PoI" description="Removes one or more point of interests from the map." actionlabel="Remove" friendcode="poi poi-list" />
+        <inputendpoint name="replacePoIs" type="text" label="Replace PoIs" description="Replace all the rendered PoIs by the ones provided in the event." actionlabel="Map Viewer Insert/Update PoI" friendcode="poi poi-list"/>
+        <outputendpoint name="poiOutput" type="text" label="PoI selected" description="A PoI has been selected on the map" friendcode="poi"/>
+        <outputendpoint name="poiListOutput" type="text" label="Visible PoIs" description="List of visible PoIs" friendcode="poi-list"/>
+    </wiring>
+
+    <contents src="index.html" useplatformstyle="true"/>
+    <rendering height="300px" width="300px"/>
+</widget>

@@ -10,6 +10,8 @@ services:
         ports:
             - "${KEYROCK_PORT}:${KEYROCK_PORT}" #3000
             #- "${KEYROCK_HTTPS_PORT}:${KEYROCK_HTTPS_PORT}" #443
+        expose:
+            - "${KEYROCK_PORT}" #3000
         environment:
             - DEBUG=idm:*
             - IDM_DB_HOST=mysql-db
@@ -26,6 +28,7 @@ services:
             # If sending eMails point to any STMP server
             #- IDM_EMAIL_HOST=mailer
             #- IDM_EMAIL_PORT=25
+
 
     mysql-db:
         restart: always

@@ -1,0 +1,61 @@
+.label, .badge {
+  color: #333;
+  background-color: white;
+  display: inline-block;
+  padding: 2px 4px;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 14px;
+  white-space: nowrap;
+  vertical-align: baseline;
+  margin: 0 2px;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25); }
+
+  .label {
+    border-radius: 3px; }
+
+    .badge {
+      padding-right: 9px;
+      padding-left: 9px;
+      border-radius: 9px; }
+      .badge:empty {
+        display: none; }
+
+.label.hidden, .badge.hidden {
+  display: none; }
+
+  .label-primary, .badge-primary {
+    color: #FFF;
+    background-color: #418cc8; }
+
+    .label-important, .label-danger, .badge-important, .badge-danger {
+      color: #FFF;
+      background-color: #D8544F; }
+
+      .label-info, .badge-info {
+        color: #FFF;
+        background-color: #5bc0de; }
+
+        .label-warning, .badge-warning {
+          color: #FFF;
+          background-color: #E9C12F; }
+
+          .label-success, .badge-success {
+            color: #FFF;
+            background-color: #5cb85c; }
+
+            .label-inverse, .badge-inverse {
+              color: #FFF;
+              background-color: #333; }
+
+              .label-connection, .badge-connection {
+                color: #FFF;
+                background-color: #3F51B5; }
+
+                .label-operator, .badge-operator {
+                  color: #FFF;
+                  background-color: #46AA5A; }
+
+                  .label-widget, .badge-widget {
+                    color: #FFF;
+                    background-color: #F0AA46; }

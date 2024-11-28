@@ -1,0 +1,428 @@
+.we-component-group {
+  margin: 0 0 10px; }
+
+  .we-component-meta {
+    margin: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0; }
+    .we-component-meta .panel-body {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      user-select: none; }
+
+.we-component-group .we-component {
+  border-radius: 0;
+  margin: 0;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none; }
+  .we-component-group .we-component .panel-heading {
+    padding: 5px 8px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0; }
+    .we-component-group .we-component .panel-heading .label {
+      float: right; }
+  .we-component-group .we-component .panel-title {
+    width: 85%;
+    float: left; }
+    .we-component-group .we-component:not(:last-child) .panel-heading {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0; }
+      .we-component-group .we-component .component-version {
+        float: left; }
+.we-component-group:last-child {
+  margin-bottom: 0; }
+  .we-component-group > :last-child {
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px; }
+
+.component-title {
+  white-space: nowrap; }
+  .component-title span {
+    display: inline-block;
+    max-width: 100%; }
+
+.component-operator {
+  border-color: rgba(48, 116, 61, 0.9); }
+  .component-operator .panel-heading {
+    background-color: rgba(70, 170, 90, 0.9); }
+    .component-operator .panel-heading .panel-title,
+    .component-operator .panel-heading .panel-subtitle,
+    .component-operator .panel-heading .panel-options .se-btn {
+      color: white;
+      text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.2); }
+
+.component-widget {
+  border-color: rgba(216, 134, 18, 0.9); }
+  .component-widget .panel-heading {
+    background-color: rgba(240, 170, 70, 0.9); }
+    .component-widget .panel-heading .panel-title,
+    .component-widget .panel-heading .panel-subtitle,
+    .component-widget .panel-heading .panel-options .se-btn {
+      color: white;
+      text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.2); }
+
+.wiring-sidebar .component-operator {
+  border-color: #30743d; }
+  .wiring-sidebar .component-operator .panel-heading {
+    background-color: #46aa5a; }
+    .wiring-sidebar .component-operator .panel-heading .panel-title,
+    .wiring-sidebar .component-operator .panel-heading .panel-subtitle,
+    .wiring-sidebar .component-operator .panel-heading .panel-options .se-btn {
+      color: white;
+      text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.2); }
+      .wiring-sidebar .component-operator .panel-heading .text-truncate:after {
+        background-image: linear-gradient(to right, rgba(70, 170, 90, 0), #46aa5a); }
+  .wiring-sidebar .component-operator:hover {
+    border-color: #21502a; }
+    .wiring-sidebar .component-operator:hover .panel-heading {
+      background-color: #3f9850; }
+      .wiring-sidebar .component-operator:hover .panel-heading .panel-title,
+      .wiring-sidebar .component-operator:hover .panel-heading .panel-subtitle,
+      .wiring-sidebar .component-operator:hover .panel-heading .panel-options .se-btn {
+        color: white;
+        text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.2); }
+        .wiring-sidebar .component-operator:hover .panel-heading .text-truncate:after {
+          background-image: linear-gradient(to right, rgba(63, 152, 80, 0), #3f9850); }
+.wiring-sidebar .component-widget {
+  border-color: #d88612; }
+  .wiring-sidebar .component-widget .panel-heading {
+    background-color: #f0aa46; }
+    .wiring-sidebar .component-widget .panel-heading .panel-title,
+    .wiring-sidebar .component-widget .panel-heading .panel-subtitle,
+    .wiring-sidebar .component-widget .panel-heading .panel-options .se-btn {
+      color: white;
+      text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.2); }
+      .wiring-sidebar .component-widget .panel-heading .text-truncate:after {
+        background-image: linear-gradient(to right, rgba(240, 170, 70, 0), #f0aa46); }
+  .wiring-sidebar .component-widget:hover {
+    border-color: #a9690e; }
+    .wiring-sidebar .component-widget:hover .panel-heading {
+      background-color: #ee9f2e; }
+      .wiring-sidebar .component-widget:hover .panel-heading .panel-title,
+      .wiring-sidebar .component-widget:hover .panel-heading .panel-subtitle,
+      .wiring-sidebar .component-widget:hover .panel-heading .panel-options .se-btn {
+        color: white;
+        text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.2); }
+        .wiring-sidebar .component-widget:hover .panel-heading .text-truncate:after {
+          background-image: linear-gradient(to right, rgba(238, 159, 46, 0), #ee9f2e); }
+
+.we-component.disabled, .we-component.disabled:hover {
+  cursor: default;
+  opacity: 1;
+  box-shadow: none;
+  border-color: #dbdbdb; }
+  .we-component.disabled > .panel-heading,
+  .we-component.disabled:hover > .panel-heading {
+    background-color: whitesmoke; }
+    .we-component.disabled > .panel-heading,
+    .we-component.disabled > .panel-heading > .panel-title,
+    .we-component.disabled > .panel-heading > .panel-subtitle,
+    .we-component.disabled > .panel-heading > .panel-options > .se-btn,
+    .we-component.disabled:hover > .panel-heading,
+    .we-component.disabled:hover > .panel-heading > .panel-title,
+    .we-component.disabled:hover > .panel-heading > .panel-subtitle,
+    .we-component.disabled:hover > .panel-heading > .panel-options > .se-btn {
+      color: #666;
+      text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.8); }
+      .we-component.disabled > .panel-heading > .panel-options > .se-btn:hover,
+      .we-component.disabled > .panel-heading > .panel-options > .se-btn:focus,
+      .we-component.disabled:hover > .panel-heading > .panel-options > .se-btn:hover,
+      .we-component.disabled:hover > .panel-heading > .panel-options > .se-btn:focus {
+        color: #3278b4; }
+    .we-component.disabled > .panel-heading .text-truncate:after,
+    .we-component.disabled:hover > .panel-heading .text-truncate:after {
+      background-image: linear-gradient(to right, rgba(245, 245, 245, 0), whitesmoke); }
+
+.component-draggable {
+  position: absolute;
+  margin: 0;
+  background-color: transparent;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  cursor: pointer;
+  z-index: 10; }
+  .component-draggable .panel-heading {
+    display: table;
+    width: 100%;
+    white-space: nowrap; }
+    .component-draggable .panel-heading .panel-title,
+    .component-draggable .panel-heading .panel-options {
+      display: table-cell;
+      float: inherit;
+      vertical-align: middle; }
+      .component-draggable .panel-heading .panel-title {
+        max-width: 180px; }
+        .component-draggable .panel-heading .panel-title > span {
+          max-width: 100%;
+          display: block;
+          text-overflow: ellipsis;
+          overflow: hidden; }
+    .component-draggable .panel-heading .panel-options {
+      padding-left: 10px;
+      float: right; }
+  .component-draggable .panel-body {
+    display: table;
+    width: 100%;
+    padding: 0;
+    background-color: rgba(255, 255, 255, 0.9); }
+    .component-draggable .panel-body:empty {
+      display: none; }
+  .component-draggable.dragging {
+    cursor: move; }
+
+.endpoints {
+  position: relative;
+  display: table-cell;
+  vertical-align: middle; }
+  .endpoints .endpoint {
+    position: relative;
+    cursor: pointer;
+    clear: both;
+    margin: 0 0 5px; }
+    .endpoints .endpoint .endpoint-title {
+      color: #464646;
+      text-overflow: ellipsis; }
+      .endpoints .endpoint .endpoint-anchor {
+        position: absolute;
+        top: 0;
+        padding: 10px 5px; }
+        .endpoints .endpoint:first-child {
+          margin-top: 5px; }
+  .endpoints.source-endpoints .endpoint {
+    float: right;
+    border-radius: 4px 0px 0px 4px; }
+    .endpoints.source-endpoints .endpoint .endpoint-anchor {
+      right: -11px;
+      background-color: rgba(100, 200, 230, 0.9);
+      border-radius: 0px 4px 4px 0px; }
+  .endpoints.source-endpoints .endpoint:hover .endpoint-anchor,
+  .endpoints.source-endpoints .endpoint.active .endpoint-anchor {
+    border-left: solid 1px #5a9beb; }
+  .endpoints.target-endpoints .endpoint {
+    float: left;
+    border-radius: 0px 4px 4px 0px; }
+    .endpoints.target-endpoints .endpoint .endpoint-anchor {
+      left: -11px;
+      background-color: rgba(30, 170, 220, 0.9);
+      border-radius: 4px 0px 0px 4px; }
+  .endpoints.target-endpoints .endpoint:hover .endpoint-anchor,
+  .endpoints.target-endpoints .endpoint.active .endpoint-anchor {
+    border-left: solid 1px #5a9beb; }
+  .endpoints:empty {
+    display: none; }
+    .endpoints .endpoint:hover, .endpoints .endpoint.active,
+    .endpoints .endpoint.active.disabled {
+      background-color: #5a9beb;
+      opacity: 1; }
+      .endpoints .endpoint:hover .endpoint-title,
+      .endpoints .endpoint.active .endpoint-title,
+      .endpoints .endpoint.active.disabled .endpoint-title {
+        color: white; }
+        .endpoints .endpoint:hover .endpoint-anchor,
+        .endpoints .endpoint.active .endpoint-anchor,
+        .endpoints .endpoint.active.disabled .endpoint-anchor {
+          background-color: #5a9beb; }
+  .endpoints .endpoint.missing .endpoint-anchor {
+    background-color: rgba(216, 84, 79, 0.9); }
+
+.endpoint {
+  max-width: 120px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none; }
+  .endpoint .endpoint-title {
+    position: relative;
+    display: block;
+    margin: 0 5px;
+    font-size: 12px;
+    line-height: 20px;
+    white-space: nowrap;
+    overflow: hidden; }
+
+.component-draggable.background {
+  z-index: 5; }
+  .component-draggable.background .panel-heading .panel-title,
+  .component-draggable.background .panel-heading .panel-options .se-btn {
+    color: rgba(0, 0, 0, 0.2);
+    text-shadow: initial; }
+    .component-draggable.background .panel-body {
+      background-color: transparent; }
+      .component-draggable.background.component-operator {
+        border-color: rgba(100, 191, 118, 0.4); }
+        .component-draggable.background.component-operator .panel-heading {
+          background-color: rgba(154, 213, 166, 0.4); }
+  .component-draggable.background.component-widget {
+    border-color: rgba(244, 192, 117, 0.4); }
+    .component-draggable.background.component-widget .panel-heading {
+      background-color: rgba(250, 224, 188, 0.4); }
+  .component-draggable.background .endpoints .endpoint .endpoint-title {
+    color: rgba(0, 0, 0, 0.3); }
+    .component-draggable.background .endpoints.source-endpoints .endpoint-anchor {
+      background-color: rgba(188, 231, 244, 0.6); }
+      .component-draggable.background .endpoints.target-endpoints .endpoint-anchor {
+        background-color: rgba(116, 204, 236, 0.6); }
+        .component-draggable.background .endpoints .endpoint:hover,
+        .component-draggable.background .endpoints .endpoint.active {
+          background-color: #5a9beb; }
+          .component-draggable.background .endpoints .endpoint:hover .endpoint-title,
+          .component-draggable.background .endpoints .endpoint.active .endpoint-title {
+            color: white; }
+            .component-draggable.background .endpoints .endpoint:hover .endpoint-anchor,
+            .component-draggable.background .endpoints .endpoint.active .endpoint-anchor {
+              background-color: #5a9beb; }
+  .component-draggable.background .endpoints .endpoint.missing .endpoint-anchor {
+    background-color: rgba(235, 165, 162, 0.6); }
+
+.component-operator .panel-heading .panel-options .se-btn:hover,
+.component-operator .panel-heading .panel-options .se-btn:focus {
+  color: rgba(33, 80, 42, 0.9);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.75); }
+
+.component-widget .panel-heading .panel-options .se-btn:hover,
+.component-widget .panel-heading .panel-options .se-btn:focus {
+  color: rgba(169, 105, 14, 0.9);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.75); }
+
+.component-draggable.active, .component-draggable.background.active {
+  border-color: #54c6f4;
+  z-index: 15; }
+  .component-draggable.active .panel-heading,
+  .component-draggable.background.active .panel-heading {
+    background-color: #b4e6fa; }
+    .component-draggable.active .panel-heading .panel-title,
+    .component-draggable.active .panel-heading .panel-options .se-btn,
+    .component-draggable.background.active .panel-heading .panel-title,
+    .component-draggable.background.active .panel-heading .panel-options .se-btn {
+      color: #3296c8;
+      text-shadow: 0 1px 0 white; }
+      .component-draggable.active .panel-heading .panel-options .se-btn:hover,
+      .component-draggable.active .panel-heading .panel-options .se-btn:focus,
+      .component-draggable.background.active .panel-heading .panel-options .se-btn:hover,
+      .component-draggable.background.active .panel-heading .panel-options .se-btn:focus {
+        color: #28779f;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.75); }
+  .component-draggable.active .panel-body,
+  .component-draggable.background.active .panel-body {
+    background-color: rgba(255, 255, 255, 0.9); }
+    .component-draggable.active .endpoints .endpoint .endpoint-title,
+    .component-draggable.background.active .endpoints .endpoint .endpoint-title {
+      color: #464646; }
+      .component-draggable.active .endpoints.source-endpoints .endpoint .endpoint-anchor,
+      .component-draggable.background.active .endpoints.source-endpoints .endpoint .endpoint-anchor {
+        background-color: rgba(100, 200, 230, 0.9); }
+        .component-draggable.active .endpoints.source-endpoints .endpoint:hover .endpoint-anchor,
+        .component-draggable.active .endpoints.source-endpoints .endpoint.active .endpoint-anchor,
+        .component-draggable.background.active .endpoints.source-endpoints .endpoint:hover .endpoint-anchor,
+        .component-draggable.background.active .endpoints.source-endpoints .endpoint.active .endpoint-anchor {
+          border-left: solid 1px #28779f; }
+    .component-draggable.active .endpoints.target-endpoints .endpoint .endpoint-anchor,
+    .component-draggable.background.active .endpoints.target-endpoints .endpoint .endpoint-anchor {
+      background-color: rgba(30, 170, 220, 0.9); }
+      .component-draggable.active .endpoints.target-endpoints .endpoint:hover .endpoint-anchor,
+      .component-draggable.active .endpoints.target-endpoints .endpoint.active .endpoint-anchor,
+      .component-draggable.background.active .endpoints.target-endpoints .endpoint:hover .endpoint-anchor,
+      .component-draggable.background.active .endpoints.target-endpoints .endpoint.active .endpoint-anchor {
+        border-right: solid 1px #28779f; }
+    .component-draggable.active .endpoints .endpoint:hover,
+    .component-draggable.active .endpoints .endpoint.active,
+    .component-draggable.background.active .endpoints .endpoint:hover,
+    .component-draggable.background.active .endpoints .endpoint.active {
+      background-color: #28779f; }
+      .component-draggable.active .endpoints .endpoint:hover .endpoint-title,
+      .component-draggable.active .endpoints .endpoint.active .endpoint-title,
+      .component-draggable.background.active .endpoints .endpoint:hover .endpoint-title,
+      .component-draggable.background.active .endpoints .endpoint.active .endpoint-title {
+        color: white; }
+        .component-draggable.active .endpoints .endpoint:hover .endpoint-anchor,
+        .component-draggable.active .endpoints .endpoint.active .endpoint-anchor,
+        .component-draggable.background.active .endpoints .endpoint:hover .endpoint-anchor,
+        .component-draggable.background.active .endpoints .endpoint.active .endpoint-anchor {
+          background-color: #28779f; }
+    .component-draggable.active .endpoints .endpoint.missing .endpoint-anchor,
+    .component-draggable.background.active .endpoints .endpoint.missing .endpoint-anchor {
+      background-color: rgba(216, 84, 79, 0.9); }
+
+.component-draggable .endpoints .endpoint.missing:hover,
+.component-draggable .endpoints .endpoint.missing.active,
+.component-draggable.active .endpoints .endpoint.missing:hover,
+.component-draggable.active .endpoints .endpoint.missing.active {
+  background-color: #c8322c; }
+  .component-draggable .endpoints .endpoint.missing:hover .endpoint-anchor,
+  .component-draggable .endpoints .endpoint.missing.active .endpoint-anchor,
+  .component-draggable.active .endpoints .endpoint.missing:hover .endpoint-anchor,
+  .component-draggable.active .endpoints .endpoint.missing.active .endpoint-anchor {
+    background-color: #c8322c; }
+.component-draggable .endpoints.source-endpoints .endpoint.missing:hover .endpoint-anchor,
+.component-draggable .endpoints.source-endpoints .endpoint.missing.active .endpoint-anchor,
+.component-draggable.active .endpoints.source-endpoints .endpoint.missing:hover .endpoint-anchor,
+.component-draggable.active .endpoints.source-endpoints .endpoint.missing.active .endpoint-anchor {
+  border-left: solid 1px #c8322c; }
+.component-draggable .endpoints.target-endpoints .endpoint.missing:hover .endpoint-anchor,
+.component-draggable .endpoints.target-endpoints .endpoint.missing.active .endpoint-anchor,
+.component-draggable.active .endpoints.target-endpoints .endpoint.missing:hover .endpoint-anchor,
+.component-draggable.active .endpoints.target-endpoints .endpoint.missing.active .endpoint-anchor {
+  border-left: solid 1px #c8322c; }
+
+.wc-workspace-wiring .component-draggable.collapsed .endpoints {
+  position: absolute;
+  top: 10px; }
+  .wc-workspace-wiring .component-draggable.collapsed .endpoints > .endpoint {
+    position: absolute;
+    cursor: default;
+    margin: 0; }
+    .wc-workspace-wiring .component-draggable.collapsed .endpoints > .endpoint .endpoint-title {
+      display: none; }
+      .wc-workspace-wiring .component-draggable.collapsed .endpoints > .endpoint .endpoint-anchor {
+        pointer-events: none; }
+.wc-workspace-wiring .component-draggable.collapsed .target-endpoints {
+  left: 0; }
+  .wc-workspace-wiring .component-draggable.collapsed .source-endpoints {
+    right: 0; }
+
+.component-draggable .endpoints.orderable .endpoint {
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.25); }
+  .component-draggable .endpoints.orderable .endpoint.dragging {
+    background-color: #f9f9f9;
+    box-shadow: inset 0px 0px 5px rgba(0, 0, 0, 0.35); }
+    .component-draggable .endpoints.orderable .endpoint.dragging .endpoint-title {
+      color: rgba(70, 70, 70, 0.7); }
+
+.endpoint.cloned {
+  position: absolute;
+  background-color: #28779f;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.25);
+  cursor: move;
+  z-index: 20; }
+  .endpoint.cloned .endpoint-title {
+    color: white; }
+    .endpoint.cloned .endpoint-anchor {
+      display: none; }
+      .endpoint.cloned.source-endpoint {
+        border-radius: 4px 0px 0px 4px; }
+        .endpoint.cloned.target-endpoint {
+          border-radius: 0px 4px 4px 0px; }
+
+.component-draggable .component-notice {
+  position: absolute;
+  top: -10px;
+  right: 0;
+  left: 0;
+  text-align: center; }
+  .component-draggable .component-notice .label {
+    font-size: 12px;
+    line-height: 20px;
+    padding: 0px 8px;
+    margin: 0; }
+
+.component-draggable.background .component-notice .label {
+  background-color: rgba(230, 145, 142, 0.7); }
+
+  .component-draggable.active .component-notice .label,
+  .component-draggable.active.background .component-notice .label {
+    background-color: #D8544F; }
+
+.component-draggable .component-notice .label:hover,
+.component-draggable.background .component-notice .label:hover {
+  background-color: #c8322c; }

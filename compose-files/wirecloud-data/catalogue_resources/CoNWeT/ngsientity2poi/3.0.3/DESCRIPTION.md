@@ -1,0 +1,3 @@
+This operator transforms NGSI entities (as the ones coming from the NGSI source operator) to Points of Interest. To be able to do so, those entities should contain an attribute containing the coordinates of the entity. Also, take into account the fact this operator is generic, so marker bubbles of the PoIs created by this operator will be a mere composition of the attribute/value pairs.
+
+If your are a developer, an option for improving information shown in the associated point of interest bubbles is to download this operator an use it as an skeleton for your improved version of the operator. *Remember to change the id metadata* (vendor, name and version) before uploading it again.

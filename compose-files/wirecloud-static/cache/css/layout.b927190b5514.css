@@ -1,0 +1,39 @@
+.wc-workspace-wiring {
+  padding: 0px 5px; }
+
+  .wiring-diagram {
+    background-color: #fcfcfc;
+    border: solid 1px #dbdbdb;
+    border-radius: 4px; }
+
+    .we-connections-layer {
+      position: absolute;
+      width: 100%;
+      height: 100%; }
+      .we-connections-layer.dragging {
+        cursor: -webkit-grabbing;
+        cursor: -moz-grabbing;
+        cursor: grabbing; }
+
+.we-panel-components {
+  margin: 0px; }
+  .we-panel-components .se-text-field {
+    margin: 10px 0;
+    width: 100%; }
+    .we-panel-components .se-input-group-block {
+      margin: 0; }
+      .we-panel-components .wc-macsearch-list {
+        padding-top: 0; }
+        .we-panel-components .wc-macsearch-list .alert {
+          margin: 0 0 10px; }
+
+.we-panel-behaviours .panel-heading .btn-group {
+  margin-top: 10px; }
+  .we-panel-behaviours.disabled {
+    opacity: 1; }
+
+.wiring-footer {
+  padding: 10px 10px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none; }

@@ -1,0 +1,26 @@
+.wc-upgrade-component-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center; }
+
+  .wc-upgrade-component-modal article {
+    height: 300px; }
+
+    .wc-upgrade-component-modal article.uprade {
+      color: #357935; }
+      .wc-upgrade-component-modal article.uprade h1,
+      .wc-upgrade-component-modal article.uprade h2,
+      .wc-upgrade-component-modal article.uprade h3,
+      .wc-upgrade-component-modal article.uprade h4,
+      .wc-upgrade-component-modal article.uprade h5,
+      .wc-upgrade-component-modal article.uprade h6 {
+        color: #357935; }
+    .wc-upgrade-component-modal article.downgrade {
+      color: #9e2723; }
+      .wc-upgrade-component-modal article.downgrade h1,
+      .wc-upgrade-component-modal article.downgrade h2,
+      .wc-upgrade-component-modal article.downgrade h3,
+      .wc-upgrade-component-modal article.downgrade h4,
+      .wc-upgrade-component-modal article.downgrade h5,
+      .wc-upgrade-component-modal article.downgrade h6 {
+        color: #9e2723; }

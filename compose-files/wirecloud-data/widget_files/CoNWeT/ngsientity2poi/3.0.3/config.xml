@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<operator xmlns="http://wirecloud.conwet.fi.upm.es/ns/macdescription/1" vendor="CoNWeT" name="ngsientity2poi" version="3.0.3">
+  <details>
+    <title>NGSI Entity To PoI</title>
+    <homepage>https://github.com/wirecloud-fiware/ngsientity2poi</homepage>
+    <authors>aarranz</authors>
+    <email>aarranz@conwet.com</email>
+    <image>images/catalogue.png</image>
+    <description>Convert NGSI entities coming from the orion context broker to Point of Interests (usable by map widgets).</description>
+    <longdescription>DESCRIPTION.md</longdescription>
+    <license>Apache License 2.0</license>
+    <licenseurl>http://www.apache.org/licenses/LICENSE-2.0.html</licenseurl>
+    <doc>doc/index.md</doc>
+    <changelog>doc/changelog.md</changelog>
+  </details>
+    <preferences>
+        <preference name="coordinates_attr" label="Coordinates attribute" description="Name of the entity attribute where the coordinates are stored. If the entity provides the coordinates through a pair of attributes, you can pass those names using a comma (e.g. 'latitude, longitude')" default="position" type="text"/>
+        <preference name="marker-icon" label="Marker Icon" description="Absolute URL pointing to an image that will be used for the markers created by this operator. Leave this setting empty for using the default marker icon" default="" type="text"/>
+    </preferences>
+  <wiring>
+    <outputendpoint name="poiOutput" type="text" label="PoI" description="Transformed Point of Interest from the received entity" friendcode="poi"/>
+    <inputendpoint name="entityInput" type="text" label="Entity" description="Received entity will be transform to a PoI" friendcode="entity"/>
+  </wiring>
+  <scripts>
+    <script src="js/main.js"/>
+  </scripts>
+</operator>

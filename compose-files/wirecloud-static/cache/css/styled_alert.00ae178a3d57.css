@@ -1,0 +1,103 @@
+.alert {
+  position: relative;
+  padding: 15px;
+  margin-bottom: 20px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 4px;
+  box-sizing: border-box;
+  color: #a18211;
+  background: #faf1d0;
+  border-color: #e6a918; }
+  .alert a, .alert .alert-link {
+    color: #8a6f0f; }
+    .alert blockquote {
+      border-left-color: #a18211; }
+      .alert h4:first-child {
+        margin-top: 0;
+        color: inherit; }
+        .alert .close {
+          position: relative;
+          top: -2px;
+          right: -21px;
+          line-height: 20px; }
+          .alert a, .alert .alert-link {
+            font-weight: 700; }
+            .alert::after {
+              content: '';
+              display: block;
+              clear: both; }
+
+.alert-success {
+  color: #357935;
+  background: #d8eed8;
+  border-color: #54ae4c; }
+  .alert-success a, .alert-success .alert-link {
+    color: #2d672d; }
+    .alert-success blockquote {
+      border-left-color: #357935; }
+
+.alert-danger, .alert-error {
+  color: #9e2723;
+  background: #f8e2e1;
+  border-color: #d33a41; }
+  .alert-danger a, .alert-danger .alert-link, .alert-error a,
+  .alert-error .alert-link {
+    color: #89221e; }
+    .alert-danger blockquote, .alert-error blockquote {
+      border-left-color: #9e2723; }
+
+.alert-info {
+  color: #2390b0;
+  background: #f0f9fc;
+  border-color: #46c4da; }
+  .alert-info a, .alert-info .alert-link {
+    color: #1f7e9a; }
+    .alert-info blockquote {
+      border-left-color: #2390b0; }
+
+.alert-block {
+  padding-top: 14px;
+  padding-bottom: 14px; }
+
+  .alert > p:last-child, .alert > ul:last-child {
+    margin-bottom: 0; }
+
+    .alert > p + p {
+      margin-top: 5px; }
+
+      .alert > .fa-remove {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        font-size: 20px;
+        opacity: 0.2;
+        line-height: 20px;
+        color: black;
+        text-decoration: none; }
+
+        .alert > .fa-remove:hover, .alert > .fa-remove:focus {
+          opacity: 0.4; }
+
+          .se-alert-heading {
+            box-sizing: border-box;
+            margin-bottom: 10px;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 17px;
+            line-height: 1.2;
+            color: inherit;
+            text-rendering: optimizelegibility; }
+
+            .se-alert-body {
+              text-align: justify;
+              font-size: 14px; }
+
+              .se-alert-static-top {
+                position: absolute;
+                top: 0;
+                right: 0;
+                left: 0;
+                margin: 10px auto;
+                width: 500px; }
