@@ -27,113 +27,165 @@
 
     "use strict";
 
+    const events = ['click', 'connectionadded', 'connectionremoved', 'mousedown', 'mouseenter', 'mouseleave', 'mouseup'];
+
+    const endpoint_onmousedown = function endpoint_onmousedown(event) {
+        if (this.enabled && event.button === 0) {
+            event.stopPropagation();
+            event.preventDefault();  // Required for disabling text selection
+            this.dispatchEvent('mousedown', event);
+        }
+    };
+
+    const endpoint_onmouseenter = function endpoint_onmouseenter(event) {
+        if (this.enabled) {
+            event.stopPropagation();
+            this.dispatchEvent('mouseenter', event);
+        }
+    };
+
+    const endpoint_onmouseleave = function endpoint_onmouseleave(event) {
+        if (this.enabled) {
+            event.stopPropagation();
+            this.dispatchEvent('mouseleave', event);
+        }
+    };
+
+    const endpoint_onmouseup = function endpoint_onmouseup(event) {
+        if (this.enabled && event.button === 0) {
+            event.stopPropagation();
+            event.preventDefault();  // Required for disabling text selection
+            this.dispatchEvent('mouseup', event);
+        }
+    };
+
+    const getAnchorPosition = function getAnchorPosition() {
+        const layout    = this.component.parent(),
+            layoutBCR = layout.getBoundingClientRect(),
+            anchorBCR = this.anchorElement.getBoundingClientRect();
+
+        const anchorPosition = {
+            x: Math.round(anchorBCR.left - (layoutBCR.left + 1) + layout.scrollLeft),
+            y: Math.round(anchorBCR.top + (this.anchorElement.offsetHeight / 2) - (layoutBCR.top + 1) + layout.scrollTop)
+        };
+
+        if (this.rightAnchorPoint) {
+            anchorPosition.x = Math.round(anchorPosition.x + anchorBCR.width);
+        }
+
+        return anchorPosition;
+    };
+
     // =========================================================================
     // CLASS DEFINITION
     // =========================================================================
 
-    /**
-     * Creates a visual representation of a wiring endpoint for being used on
-     * the Wiring Editor user interface.
-     *
-     * @extends {StyledElements.StyledElement}
-     * @name Wirecloud.ui.WiringEditor.Endpoint
-     *
-     * @constructor
-     * @param {String} type
-     *      `"source"` for output endpoints and `"target"` for input endpoints
-     * @param {Wirecloud.wiring.Endpoint} wiringEndpoint
-     *      Real endpoint instance
-     * @param {Wirecloud.ui.WiringEditor.ComponentDraggable} component
-     *      WiringEditor component associated with the endpoint
-     */
-    ns.Endpoint = function Endpoint(wiringEndpoint, component) {
-        var type;
+    ns.Endpoint = class Endpoint extends se.StyledElement {
 
-        if (wiringEndpoint instanceof Wirecloud.wiring.SourceEndpoint) {
-            type = "source";
-        } else if (wiringEndpoint instanceof Wirecloud.wiring.TargetEndpoint) {
-            type = "target";
-        } else {
-            throw new TypeError('invalid wiringEndpoint parameter');
+        /**
+         * Creates a visual representation of a wiring endpoint for being used on
+         * the Wiring Editor user interface.
+         *
+         * @extends {StyledElements.StyledElement}
+         * @name Wirecloud.ui.WiringEditor.Endpoint
+         *
+         * @constructor
+         * @param {String} type
+         *      `"source"` for output endpoints and `"target"` for input endpoints
+         * @param {Wirecloud.wiring.Endpoint} wiringEndpoint
+         *      Real endpoint instance
+         * @param {Wirecloud.ui.WiringEditor.ComponentDraggable} component
+         *      WiringEditor component associated with the endpoint
+         */
+        constructor(wiringEndpoint, component) {
+            let type;
+
+            if (wiringEndpoint instanceof Wirecloud.wiring.SourceEndpoint) {
+                type = "source";
+            } else if (wiringEndpoint instanceof Wirecloud.wiring.TargetEndpoint) {
+                type = "target";
+            } else {
+                throw new TypeError('invalid wiringEndpoint parameter');
+            }
+
+            super(events);
+
+            this.wrapperElement = document.createElement('div');
+            this.wrapperElement.className = "endpoint";
+
+            this.titleElement = document.createElement('span');
+            this.titleElement.className = "endpoint-title";
+            this.wrapperElement.appendChild(this.titleElement);
+
+            this.anchorElement = document.createElement('span');
+            this.anchorElement.className = "endpoint-anchor";
+            this.wrapperElement.appendChild(this.anchorElement);
+
+            this._endpoint = wiringEndpoint;
+            this.component = component;
+
+            this.activeCount = 0;
+            this.connections = [];
+
+            Object.defineProperties(this, {
+
+                anchorPosition: {
+                    get: getAnchorPosition
+                },
+
+                id: {value: [component.type, component.id, wiringEndpoint.name].join("/")},
+
+                index: {
+                    get: function get() {return parseInt(this.get().getAttribute('data-index'), 10);},
+                    set: function set(value) {this.get().setAttribute('data-index', value);}
+                },
+
+                friendcodeList: {value: wiringEndpoint.friendcodeList},
+
+                missing: {
+                    get: function get() {return this.hasClassName('missing');},
+                    set: function set(value) {this.toggleClassName('missing', value);}
+                },
+
+                name: {value: wiringEndpoint.name},
+
+                title: {
+                    get: function get() {return this.titleElement.textContent;},
+                    set: function set(value) {this.titleElement.textContent = value;}
+                },
+
+                type: {value: type}
+
+            });
+            this.get().setAttribute('data-name', this._endpoint.name);
+
+            this.title = wiringEndpoint.label;
+            if (wiringEndpoint.missing) {
+                this.missing = true;
+            }
+
+            this.rightAnchorPoint = type === "source";
+
+            this.tooltip = new se.Popover({
+                title: wiringEndpoint.label,
+                content: wiringEndpoint.description !== '' ? wiringEndpoint.description : utils.gettext("No description provided."),
+                placement: ['top', 'bottom', 'right', 'left']
+            });
+            this.tooltip.bind(this.get(), 'hover');
+
+            this.get().addEventListener('mousedown', endpoint_onmousedown.bind(this));
+            this.get().addEventListener('mouseenter', endpoint_onmouseenter.bind(this));
+            this.get().addEventListener('mouseleave', endpoint_onmouseleave.bind(this));
+            this.get().addEventListener('mouseup', endpoint_onmouseup.bind(this));
         }
 
-        se.StyledElement.call(this, events);
-
-        this.wrapperElement = document.createElement('div');
-        this.wrapperElement.className = "endpoint";
-
-        this.titleElement = document.createElement('span');
-        this.titleElement.className = "endpoint-title";
-        this.wrapperElement.appendChild(this.titleElement);
-
-        this.anchorElement = document.createElement('span');
-        this.anchorElement.className = "endpoint-anchor";
-        this.wrapperElement.appendChild(this.anchorElement);
-
-        this._endpoint = wiringEndpoint;
-        this.component = component;
-
-        this.activeCount = 0;
-        this.connections = [];
-
-        Object.defineProperties(this, {
-
-            active: {
-                get: function get() {return this.hasClassName('active');},
-                set: function set(value) {this.toggleClassName('active', value);}
-            },
-
-            anchorPosition: {
-                get: getAnchorPosition
-            },
-
-            id: {value: [component.type, component.id, wiringEndpoint.name].join("/")},
-
-            index: {
-                get: function get() {return parseInt(this.get().getAttribute('data-index'), 10);},
-                set: function set(value) {this.get().setAttribute('data-index', value);}
-            },
-
-            friendcodeList: {value: wiringEndpoint.friendcodeList},
-
-            missing: {
-                get: function get() {return this.hasClassName('missing');},
-                set: function set(value) {this.toggleClassName('missing', value);}
-            },
-
-            name: {value: wiringEndpoint.name},
-
-            title: {
-                get: function get() {return this.titleElement.textContent;},
-                set: function set(value) {this.titleElement.textContent = value;}
-            },
-
-            type: {value: type}
-
-        });
-        this.get().setAttribute('data-name', this._endpoint.name);
-
-        this.title = wiringEndpoint.label;
-        if (wiringEndpoint.missing) {
-            this.missing = true;
+        get active() {
+            return this.hasClassName('active');
         }
 
-        this.rightAnchorPoint = type === "source";
-
-        this.tooltip = new se.Popover({
-            title: wiringEndpoint.label,
-            content: wiringEndpoint.description !== '' ? wiringEndpoint.description : utils.gettext("No description provided."),
-            placement: ['top', 'bottom', 'right', 'left']
-        });
-        this.tooltip.bind(this.get(), 'hover');
-
-        this.get().addEventListener('mousedown', endpoint_onmousedown.bind(this));
-        this.get().addEventListener('mouseenter', endpoint_onmouseenter.bind(this));
-        this.get().addEventListener('mouseleave', endpoint_onmouseleave.bind(this));
-        this.get().addEventListener('mouseup', endpoint_onmouseup.bind(this));
-    };
-
-    utils.inherit(ns.Endpoint, se.StyledElement, /** @lends Wirecloud.ui.WiringEditor.Endpoint.prototype */ {
+        set active(value) {
+            this.toggleClassName('active', value);
+        }
 
         /**
          * Increments the activation count for this endpoint and, if the
@@ -142,7 +194,7 @@
          * @returns {Wirecloud.ui.WiringEditor.Endpoint}
          *      The instance on which the member is called.
          */
-        activate: function activate() {
+        activate() {
 
             if (this.activeCount === 0) {
                 this.active = true;
@@ -151,7 +203,7 @@
             this.activeCount++;
 
             return this;
-        },
+        }
 
         /**
          * Activates all the connections associated with this endpoint
@@ -159,11 +211,11 @@
          * @returns {Wirecloud.ui.WiringEditor.Endpoint}
          *      The instance on which the member is called.
          */
-        activateAll: function activateAll() {
+        activateAll() {
             return this.forEachConnection(function (connection) {
                 connection.activate();
             });
-        },
+        }
 
         /**
          * Appends a connection to this endpoint.
@@ -175,7 +227,7 @@
          * @returns {Wirecloud.ui.WiringEditor.Endpoint}
          *      The instance on which the member is called.
          */
-        appendConnection: function appendConnection(connection, updateEndpoint) {
+        appendConnection(connection, updateEndpoint) {
 
             this.connections.push(connection);
 
@@ -184,7 +236,7 @@
             }
 
             return this.dispatchEvent('connectionadded', connection);
-        },
+        }
 
         /**
          * Decrements the activation count and, if the activation count is 1,
@@ -193,7 +245,7 @@
          * @returns {Wirecloud.ui.WiringEditor.Endpoint}
          *      The instance on which the member is called.
          */
-        deactivate: function deactivate() {
+        deactivate() {
 
             if (this.activeCount === 0) {
                 return this;
@@ -206,7 +258,7 @@
             }
 
             return this;
-        },
+        }
 
         /**
          * Deactivates all the connections associated with this endpoint
@@ -214,11 +266,11 @@
          * @returns {Wirecloud.ui.WiringEditor.Endpoint}
          *      The instance on which the member is called.
          */
-        deactivateAll: function deactivateAll() {
+        deactivateAll() {
             return this.forEachConnection(function (connection) {
                 connection.deactivate();
             });
-        },
+        }
 
         /**
          * Equality comparison with other value.
@@ -229,14 +281,14 @@
          *      `true` if endpoint represents the same endpoint,
          *      `false` otherwise
          */
-        equals: function equals(endpoint) {
+        equals(endpoint) {
 
             if (!(endpoint instanceof ns.Endpoint)) {
                 return false;
             }
 
             return this.type === endpoint.type && this.id === endpoint.id;
-        },
+        }
 
         /**
          * Loops over all the connections associated with this endpoint
@@ -246,14 +298,14 @@
          * @returns {Wirecloud.ui.WiringEditor.Endpoint}
          *      The instance on which the member is called.
          */
-        forEachConnection: function forEachConnection(callback) {
+        forEachConnection(callback) {
 
-            for (var i = this.connections.length - 1; i >= 0; i--) {
+            for (let i = this.connections.length - 1; i >= 0; i--) {
                 callback(this.connections[i], i);
             }
 
             return this;
-        },
+        }
 
         /**
          * Gets the connection whose other endpoint is connected to the given
@@ -264,19 +316,19 @@
          * @returns {Wirecloud.ui.WiringEditor.Connection}
          *      Found connection
          */
-        getConnectionTo: function getConnectionTo(endpoint) {
-            var connection = this.connections.find((connection) => {
+        getConnectionTo(endpoint) {
+            const connection = this.connections.find((connection) => {
                 return connection.hasEndpoint(endpoint);
             });
 
             return connection || null;
-        },
+        }
 
         /**
          * @param {Connection} connection
          * @returns {Boolean}
          */
-        hasConnection: function hasConnection(connection) {
+        hasConnection(connection) {
 
             if (!(connection instanceof ns.Connection)) {
                 return false;
@@ -285,7 +337,7 @@
             return this.connections.some(function (connectionSaved) {
                 return connectionSaved.equals(connection);
             });
-        },
+        }
 
         /**
          * Checks if the enpdoint has associated connections
@@ -293,9 +345,9 @@
          * @returns {Boolean}
          *      `true` if the endpoint has associated connections
          */
-        hasConnections: function hasConnections() {
+        hasConnections() {
             return this.connections.length > 0;
-        },
+        }
 
         /**
          * Checks if the endpoint has an associated connection whose other
@@ -306,11 +358,11 @@
          * @returns {Boolean}
          *      `true` if there is such connection
          */
-        hasConnectionTo: function hasConnectionTo(endpoint) {
+        hasConnectionTo(endpoint) {
             return this.connections.some(function (connection) {
                 return connection.hasEndpoint(endpoint);
             });
-        },
+        }
 
         /**
          * Refreshes all the connections associated with this endpoint.
@@ -318,13 +370,13 @@
          * @returns {Wirecloud.ui.WiringEditor.Endpoint}
          *      The instance on which the member is called.
          */
-        refresh: function refresh() {
+        refresh() {
             this.connections.forEach(function (connection) {
                 connection.refresh();
             });
 
             return this;
-        },
+        }
 
         /**
          * Removes the connection from the list of associated connections.
@@ -334,8 +386,8 @@
          * @returns {Wirecloud.ui.WiringEditor.Endpoint}
          *      The instance on which the member is called.
          */
-        removeConnection: function removeConnection(connection) {
-            var index = this.connections.indexOf(connection);
+        removeConnection(connection) {
+            const index = this.connections.indexOf(connection);
 
             if (index !== -1) {
                 this.connections.splice(index, 1);
@@ -343,7 +395,7 @@
             }
 
             return this;
-        },
+        }
 
         /**
          * TODO
@@ -353,63 +405,10 @@
          * @returns {Endpoint}
          *      The instance on which the member is called.
          */
-        toggleActive: function toggleActive(active) {
+        toggleActive(active) {
             return active ? this.activate() : this.deactivate();
-        },
-
-    });
-
-    // =========================================================================
-    // PRIVATE MEMBERS
-    // =========================================================================
-
-    var events = ['click', 'connectionadded', 'connectionremoved', 'mousedown', 'mouseenter', 'mouseleave', 'mouseup'];
-
-    var endpoint_onmousedown = function endpoint_onmousedown(event) {
-        if (this.enabled && event.button === 0) {
-            event.stopPropagation();
-            event.preventDefault();  // Required for disabling text selection
-            this.dispatchEvent('mousedown', event);
-        }
-    };
-
-    var endpoint_onmouseenter = function endpoint_onmouseenter(event) {
-        if (this.enabled) {
-            event.stopPropagation();
-            this.dispatchEvent('mouseenter', event);
-        }
-    };
-
-    var endpoint_onmouseleave = function endpoint_onmouseleave(event) {
-        if (this.enabled) {
-            event.stopPropagation();
-            this.dispatchEvent('mouseleave', event);
-        }
-    };
-
-    var endpoint_onmouseup = function endpoint_onmouseup(event) {
-        if (this.enabled && event.button === 0) {
-            event.stopPropagation();
-            event.preventDefault();  // Required for disabling text selection
-            this.dispatchEvent('mouseup', event);
-        }
-    };
-
-    var getAnchorPosition = function getAnchorPosition() {
-        var layout    = this.component.parent(),
-            layoutBCR = layout.getBoundingClientRect(),
-            anchorBCR = this.anchorElement.getBoundingClientRect();
-
-        var anchorPosition = {
-            x: Math.round(anchorBCR.left - (layoutBCR.left + 1) + layout.scrollLeft),
-            y: Math.round(anchorBCR.top + (this.anchorElement.offsetHeight / 2) - (layoutBCR.top + 1) + layout.scrollTop)
-        };
-
-        if (this.rightAnchorPoint) {
-            anchorPosition.x = Math.round(anchorPosition.x + anchorBCR.width);
         }
 
-        return anchorPosition;
-    };
+    }
 
 })(Wirecloud.ui.WiringEditor, StyledElements, StyledElements.Utils);

@@ -1,6 +1,6 @@
 /*
  *     Copyright (c) 2008-2016 CoNWeT Lab., Universidad Politécnica de Madrid
- *     Copyright (c) 2018 Future Internet Consulting and Development Solutions S.L.
+ *     Copyright (c) 2018-2020 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -23,127 +23,155 @@
 /* globals StyledElements, Wirecloud */
 
 
-(function (utils) {
+(function (ns, se, utils) {
 
     "use strict";
 
     /**
      * @abstract
      */
-    var Preferences = function Preferences(preferencesDef, values) {
-        if (preferencesDef == null) {
-            throw new TypeError("missing preferencesDef parameter");
-        }
+    ns.Preferences = class Preferences extends se.ObjectWithEvents {
 
-        if (values == null) {
-            values = {};
-        }
-
-        Object.defineProperty(this, 'meta', {value: preferencesDef});
-        Object.defineProperty(this, 'preferences', {value: {}});
-
-        var inherit, value, definition;
-        for (var key in preferencesDef.preferences) {
-            definition = preferencesDef.preferences[key];
-
-            if (key in values) {
-                inherit = values[definition.name].inherit;
-                value = values[key].value;
-            } else {
-                value = null;
-                inherit = definition.inheritByDefault;
+        constructor(preferencesDef, values) {
+            if (preferencesDef == null) {
+                throw new TypeError("missing preferencesDef parameter");
             }
 
-            this.preferences[definition.name] = new Wirecloud.PlatformPref(this, definition, inherit, value);
+            if (values == null) {
+                values = {};
+            }
+
+            super(['pre-commit', 'post-commit']);
+
+            Object.defineProperty(this, 'meta', {value: preferencesDef});
+            Object.defineProperty(this, 'preferences', {value: {}});
+
+            let inherit, value;
+            for (const key in preferencesDef.preferences) {
+                const definition = preferencesDef.preferences[key];
+
+                if (key in values) {
+                    inherit = values[definition.name].inherit;
+                    value = values[key].value;
+                } else {
+                    value = null;
+                    inherit = definition.inheritByDefault;
+                }
+
+                this.preferences[definition.name] = new Wirecloud.PlatformPref(this, definition, inherit, value);
+            }
+
+            // Bind _handleParentChanges method
+            this._handleParentChanges = this._handleParentChanges.bind(this);
         }
 
-        // Bind _handleParentChanges method
-        this._handleParentChanges = this._handleParentChanges.bind(this);
+        get(name) {
+            return name in this.preferences ? this.preferences[name].getEffectiveValue() : undefined;
+        }
 
-        StyledElements.ObjectWithEvents.call(this, ['pre-commit', 'post-commit']);
-    };
-    Preferences.prototype = new StyledElements.ObjectWithEvents();
+        /**
+         * Allows to change some preferences programatically.
+         *
+         * Example:
+         *
+         * ```javascript
+         * preferences.set({
+         *    theme:  {inherit: true},
+         *    locked: {value: true}
+         * });
+         * ```
+         *
+         * @param {Object} newValues a hash with preferenceName/changes pairs
+         */
+        set(newValues) {
+            const modifiedValues = {};
+            let persist = false;
 
-    Preferences.prototype.get = function get(name) {
-        return name in this.preferences ? this.preferences[name].getEffectiveValue() : undefined;
-    };
+            for (const name in newValues) {
+                const preference = this.preferences[name];
+                const changes = utils.clone(newValues[name]);
+                let changed = false;
 
-    /**
-     * Allows to change some preferences programatically.
-     *
-     * Example:
-     *
-     * ```javascript
-     * preferences.set({
-     *    'theme':  {inherit: true},
-     *    'locked': {value: true}
-     * });
-     * ```
-     *
-     * @param {Object} newValues a hash with preferenceName/changes pairs
-     */
-    Preferences.prototype.set = function set(newValues) {
-        var newEffectiveValues = {};
-        var modifiedValues = {};
+                if ('inherit' in changes) {
+                    if (preference.inherit !== changes.inherit) {
+                        changed = persist = true;
+                    } else {
+                        delete changes.inherit;
+                    }
+                }
 
-        for (var name in newValues) {
-            var preference = this.preferences[name];
-            var changes = newValues[name];
-            let changed = false;
-            let previousValue = preference.getEffectiveValue();
+                if ('value' in changes) {
+                    if (preference.value !== changes.value) {
+                        changed = persist = true;
+                        changes.value = Wirecloud.ui.InputInterfaceFactory.stringify(preference.meta.options.type, changes.value);
+                    } else {
+                        delete changes.value;
+                    }
+                }
 
-            if ('inherit' in changes) {
-                changed = preference.inherit !== changes.inherit;
-                preference.inherit = changes.inherit;
-            }
-
-            if ('value' in changes) {
-                changed = changed || (preference.value !== changes.value);
-                preference.value = changes.value;
-                changes.value = Wirecloud.ui.InputInterfaceFactory.stringify(preference.meta.options.type, preference.value);
-            }
-
-            if (changed) {
-                modifiedValues[name] = changes;
-                let newValue = preference.getEffectiveValue();
-                if (previousValue !== newValue) {
-                    newEffectiveValues[name] = newValue;
+                if (changed) {
+                    modifiedValues[name] = changes;
                 }
             }
+
+            if (!persist) {
+                // Nothing changed
+                return Promise.resolve();
+            }
+
+            this.dispatchEvent('pre-commit', modifiedValues);
+            return Wirecloud.io.makeRequest(this._build_save_url(), {
+                method: 'POST',
+                contentType: 'application/json',
+                requestHeaders: {'Accept': 'application/json'},
+                postBody: JSON.stringify(modifiedValues)
+            }).then((response) => {
+                if ([204, 401, 403, 422, 500].indexOf(response.status) === -1) {
+                    return Promise.reject(utils.gettext("Unexpected response from server"));
+                } else if (response.status !== 204) {
+                    return Promise.reject(Wirecloud.GlobalLogManager.parseErrorResponse(response));
+                }
+
+                const newEffectiveValues = {};
+                for (const name in modifiedValues) {
+                    const preference = this.preferences[name];
+                    const previousValue = preference.getEffectiveValue();
+                    const changes = modifiedValues[name];
+
+                    if ('inherit' in changes) {
+                        preference.inherit = changes.inherit;
+                    }
+
+                    if ('value' in changes) {
+                        preference.value = newValues[name].value;
+                    }
+
+                    const newValue = preference.getEffectiveValue();
+                    if (previousValue !== newValue) {
+                        newEffectiveValues[name] = newValue;
+                    }
+                }
+
+                this.dispatchEvent('post-commit', newEffectiveValues);
+            });
         }
 
-        if (Object.keys(modifiedValues).length === 0) {
-            // Nothing changed
-            return Promise.resolve();
-        }
+        _handleParentChanges(parentPreferences, modifiedValues) {
+            const valuesToPropagate = {};
+            let propagate = false;
 
-        this.dispatchEvent('pre-commit', newEffectiveValues);
-        return Wirecloud.io.makeRequest(this._build_save_url(), {
-            method: 'POST',
-            contentType: 'application/json',
-            requestHeaders: {'Accept': 'application/json'},
-            postBody: JSON.stringify(modifiedValues)
-        }).then(() => {
-            this.dispatchEvent('post-commit', modifiedValues);
-        });
-    };
+            for (const preferenceName in modifiedValues) {
+                if (preferenceName in this.preferences && this.preferences[preferenceName].inherit) {
+                    propagate = true;
+                    valuesToPropagate[preferenceName] = modifiedValues[preferenceName];
+                }
+            }
 
-    Preferences.prototype._handleParentChanges = function _handleParentChanges(parentPreferences, modifiedValues) {
-        var valuesToPropagate = {};
-        var propagate = false;
-
-        for (var preferenceName in modifiedValues) {
-            if (preferenceName in this.preferences && this.preferences[preferenceName].inherit) {
-                propagate = true;
-                valuesToPropagate[preferenceName] = modifiedValues[preferenceName];
+            if (propagate) {
+                this.dispatchEvent('post-commit', valuesToPropagate);
             }
         }
 
-        if (propagate) {
-            this.dispatchEvent('pre-commit', valuesToPropagate);
-        }
-    };
+    }
 
-    Wirecloud.Preferences = Preferences;
-
-})(Wirecloud.Utils);
+})(Wirecloud, StyledElements, Wirecloud.Utils);

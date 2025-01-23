@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2014-2017 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2019-2021 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -22,35 +23,134 @@
 /* globals StyledElements, Wirecloud */
 
 
-(function (utils) {
+(function (se, utils) {
 
     "use strict";
 
-    var UserInterfaceManager = {
+    // Internal variables
+    let coverLayerElement = null;
+    let currentWindowMenu = null;
+    const currentPopups = [];
+    let currentTooltip = null;
+    let alternatives = null;
+
+    // Public interface
+    const UserInterfaceManager = {
         rootKeydownHandler: null,
-        currentWindowMenu: null,
-        currentPopups: [],
         workspaceviews: {}
     };
-
-    var coverLayerElement = null;
-    var currentTooltip = null;
+    Object.defineProperties(UserInterfaceManager, {
+        currentTooltip: {get: () => {return currentTooltip;}},
+        currentWindowMenu: {get: () => {return currentWindowMenu;}}
+    });
 
     /**
      * @private
      */
-    var fadeInCover = function fadeInCover() {
+    const fadeInCover = function fadeInCover() {
         coverLayerElement.classList.add('in');
     };
 
-    var showCover = function showCover() {
+    const showCover = function showCover() {
         coverLayerElement.style.display = "block";
         setTimeout(fadeInCover, 0);
     };
 
-    var hideCover = function hideCover() {
+    const hideCover = function hideCover() {
         coverLayerElement.classList.remove('in');
         coverLayerElement.style.display = "none";
+    };
+
+    const on_keydown = function (event) {
+        const modifiers = {
+            altKey: event.altKey,
+            ctrlKey: event.ctrlKey,
+            metaKey: event.metaKey,
+            shiftKey: event.shiftKey
+        };
+        const key = utils.normalizeKey(event);
+
+        // if there are not modals, check if the current view can consume this keydown event
+        let consumed;
+        if (currentWindowMenu == null) {
+            consumed = utils.callCallback(UserInterfaceManager.rootKeydownHandler, key, modifiers);
+        } else if (key === "Backspace") {
+            // Ignore backspace keydown events if we are in a modals
+            consumed = true;
+        }
+
+        // Handle default shortcuts
+        if (!consumed && key === "Escape") {
+            UserInterfaceManager.handleEscapeEvent();
+        }
+
+        if (consumed) {
+            event.preventDefault();
+        }
+    };
+
+    const updateTaskProgress = function updateTaskProgress(task, progress) {
+        let msg;
+
+        msg = utils.gettext("%(task)s %(percentage)s%");
+        msg = utils.interpolate(msg, {task: task.title, percentage: Math.round(progress)}, true);
+        document.getElementById("loading-task-title").textContent = msg;
+
+        const list = document.createElement('ul');
+        task.subtasks.forEach(function (subtask) {
+            if (subtask.type === "then") {
+                if (subtask.subtasks.length === 0) {
+                    return;
+                }
+                subtask = subtask.subtasks[0];
+            }
+
+            if (subtask.title !== "") {
+                const msg = utils.interpolate(utils.gettext("%(subTask)s: %(percentage)s%"), {
+                    subTask: subtask.title,
+                    percentage: Math.round(subtask.progress)
+                }, true);
+                const li = document.createElement('li');
+                li.textContent = msg;
+                list.appendChild(li);
+            }
+        });
+
+        document.getElementById("loading-subtask-title").innerHTML = '';
+        document.getElementById("loading-subtask-title").appendChild(list);
+    };
+
+    const resizeUI = function resizeUI() {
+        alternatives.repaint();
+        // Recalculate menu positions
+        currentPopups.forEach((popup) => {
+            popup.repaint();
+        });
+
+        if (currentTooltip != null) {
+            currentTooltip.repaint();
+        }
+    };
+
+    const notifyPlatformReady = function notifyPlatformReady() {
+        const loadingElement = document.getElementById("loading-window");
+        if (loadingElement.classList.contains("in")) {
+            loadingElement.classList.remove("in");
+        } else {
+            loadingElement.classList.remove("fade");
+        }
+    };
+
+    const on_click = function on_click(event) {
+        const loadingElement = document.getElementById("loading-window");
+        if (!(loadingElement.classList.contains("in"))) {
+            loadingElement.classList.remove("fade");
+        }
+    };
+
+    const on_fullscreen_change = function on_fullscreen_change(event) {
+        const baseelement = utils.getFullscreenElement() || document.body;
+        baseelement.insertBefore(coverLayerElement, baseelement.firstChild);
     };
 
     UserInterfaceManager.init = function init() {
@@ -66,34 +166,7 @@
         document.body.insertBefore(coverLayerElement, document.body.firstChild);
 
         // General keydown handler
-        document.addEventListener('keydown', function (event) {
-            var modifiers, key, consumed;
-
-            modifiers = {
-                altKey: event.altKey,
-                ctrlKey: event.ctrlKey,
-                metaKey: event.metaKey,
-                shiftKey: event.shiftKey
-            };
-            key = utils.normalizeKey(event);
-
-            // if there are not modals, check if the current view can consume this keydown event
-            if (UserInterfaceManager.currentWindowMenu == null) {
-                consumed = utils.callCallback(UserInterfaceManager.rootKeydownHandler, key, modifiers);
-            } else if (key === "Backspace") {
-                // Ignore backspace keydown events if we are in a modals
-                consumed = true;
-            }
-
-            // Handle default shortcuts
-            if (!consumed && key === "Escape") {
-                UserInterfaceManager.handleEscapeEvent();
-            }
-
-            if (consumed) {
-                event.preventDefault();
-            }
-        }, false);
+        document.addEventListener('keydown', on_keydown, false);
 
         // TODO refactor
         if (document.querySelector('.plain_content') != null) {
@@ -102,30 +175,30 @@
             }
             return;
         }
-        this.alternatives = new StyledElements.Alternatives({class: 'wc-body'});
-        this.alternatives.appendTo(document.querySelector("#wc-body"));
+        alternatives = new StyledElements.Alternatives({class: 'wc-body'});
+        alternatives.appendTo(document.querySelector("#wc-body"));
 
         /* TODO| FIXME */
         if ('WirecloudHeader' in Wirecloud.ui) {
             this.header = new Wirecloud.ui.WirecloudHeader(this);
-            this.alternatives.addEventListener('preTransition', function (alternatives, old_alternative, new_alternative) {
+            alternatives.addEventListener('preTransition', function (alternatives, old_alternative, new_alternative) {
                 this.header._notifyViewChange();
             }.bind(this));
-            this.alternatives.addEventListener('postTransition', function (alternatives, old_alternative, new_alternative) {
+            alternatives.addEventListener('postTransition', function (alternatives, old_alternative, new_alternative) {
                 this.header._notifyViewChange(new_alternative);
             }.bind(this));
         }
 
         this.views = {
-            'initial': this.alternatives.createAlternative(),
-            'workspace': this.alternatives.createAlternative({'alternative_constructor': Wirecloud.ui.WorkspaceView}),
-            'wiring': this.alternatives.createAlternative({'alternative_constructor': Wirecloud.ui.WiringEditor}),
-            'marketplace': this.alternatives.createAlternative({'alternative_constructor': Wirecloud.ui.MarketplaceView})
+            'initial': alternatives.createAlternative(),
+            'workspace': alternatives.createAlternative({'alternative_constructor': Wirecloud.ui.WorkspaceView}),
+            'wiring': alternatives.createAlternative({'alternative_constructor': Wirecloud.ui.WiringEditor}),
+            'marketplace': alternatives.createAlternative({'alternative_constructor': Wirecloud.ui.MarketplaceView})
         };
 
-        Wirecloud.addEventListener('contextloaded', function () {
-            this.views.myresources = this.alternatives.createAlternative({alternative_constructor: Wirecloud.ui.MyResourcesView});
-        }.bind(this));
+        Wirecloud.addEventListener('contextloaded', () => {
+            this.views.myresources = alternatives.createAlternative({alternative_constructor: Wirecloud.ui.MyResourcesView});
+        });
 
         // Handle Workspace changes
         Wirecloud.addEventListener('activeworkspacechanged', function (Wirecloud, workspace) {
@@ -133,16 +206,14 @@
 
             // Check if the workspace needs to ask some values before loading this workspace
             if (workspace.emptyparams.length > 0) {
-                var preferences, preferenceValues, dialog;
-
-                preferenceValues = {};
+                const preferenceValues = {};
                 workspace.emptyparams.forEach((emptyparam) => {
                     if (workspace.preferences[emptyparam] != null) {
                         preferenceValues[emptyparam] = workspace.preferences[emptyparam];
                     }
                 });
 
-                preferences = Wirecloud.PreferenceManager.buildPreferences('workspace', preferenceValues, workspace, workspace.extraprefs, workspace.emptyparams);
+                const preferences = Wirecloud.PreferenceManager.buildPreferences('workspace', preferenceValues, workspace, workspace.extraprefs, workspace.emptyparams);
                 preferences.addEventListener('post-commit', function () {
                     setTimeout(function () {
                         Wirecloud.UserInterfaceManager.monitorTask(
@@ -151,13 +222,13 @@
                     }, 0);
                 }.bind(this));
 
-                dialog = new Wirecloud.ui.PreferencesWindowMenu('workspace', preferences);
+                const dialog = new Wirecloud.ui.PreferencesWindowMenu('workspace', preferences);
                 dialog.show();
                 return;
             }
 
             // init new active workspace
-            var state = Wirecloud.HistoryManager.getCurrentState();
+            const state = Wirecloud.HistoryManager.getCurrentState();
             try {
                 this.loadWorkspace(workspace, {initialtab: state.tab});
             } catch (error) {
@@ -180,8 +251,8 @@
 
             // Handle tab changes
             this.notebook.addEventListener("changed", function (notebook, oldTab, newTab) {
-                var currentState = Wirecloud.HistoryManager.getCurrentState();
-                var newState = utils.merge({}, currentState, {
+                const currentState = Wirecloud.HistoryManager.getCurrentState();
+                const newState = utils.merge({}, currentState, {
                     tab: newTab.model.name,
                     tab_id: newTab.model.id
                 });
@@ -193,7 +264,7 @@
 
             // Init wiring error badge
             this._updateWiringErrors = function (entry) {
-                var errorCount = workspace.wiring.errorCount;
+                const errorCount = workspace.wiring.errorCount;
                 this.wiringButton.setBadge(errorCount ? errorCount : null, 'danger');
             }.bind(this);
 
@@ -204,12 +275,55 @@
         }.bind(this.views.workspace));
 
         // Add some event listeners
-        utils.onFullscreenChange(document.body, on_fullscreen_change.bind(this));
-        window.addEventListener("resize", resizeUI.bind(this), true);
+        utils.onFullscreenChange(document.body, on_fullscreen_change);
+        window.addEventListener("resize", resizeUI, true);
         document.addEventListener("click", on_click.bind(this), true);
     };
 
+    UserInterfaceManager.terminate = function terminate() {
+        if (coverLayerElement == null) {
+            return;
+        }
+
+        // Remove some event listeners
+        utils.removeFullscreenChangeCallback(document.body, on_fullscreen_change);
+        window.removeEventListener("resize", resizeUI, true);
+        document.removeEventListener("click", on_click.bind(this), true);
+
+        // Clear manager status
+        if (currentWindowMenu != null) {
+            currentWindowMenu.hide();
+            hideCover();
+            currentWindowMenu = null;
+        }
+
+        currentPopups.forEach((popup) => {
+            popup.hide();
+        });
+        currentPopups.length = 0;
+
+        if (currentTooltip != null) {
+            currentTooltip.hide();
+            currentTooltip = null;
+        }
+
+        coverLayerElement.remove();
+        coverLayerElement = null;
+
+        alternatives.remove();
+        alternatives = null;
+
+        this.header = null;
+
+        return this;
+    };
+
     UserInterfaceManager.changeCurrentView = function changeCurrentView(newView, options) {
+
+        newView = this.views[newView];
+        if (newView == null) {
+            throw new TypeError('invalid newView value');
+        }
 
         if (options === true) {
             options = {};
@@ -221,68 +335,84 @@
             };
         }
 
-        var main_alts = [this.views.wiring, this.views.workspace];
-        newView = this.views[newView];
-        if (main_alts.indexOf(this.alternatives.visibleAlt) !== -1 && main_alts.indexOf(newView) !== -1) {
+        const main_alts = [this.views.wiring, this.views.workspace];
+        if (main_alts.indexOf(alternatives.visibleAlt) !== -1 && main_alts.indexOf(newView) !== -1) {
             options.effect = StyledElements.Alternatives.HORIZONTAL_SLIDE;
         } else {
             options.effect = StyledElements.Alternatives.CROSS_DISSOLVE;
         }
         this.rootKeydownHandler = null;
-        return this.alternatives.showAlternative(newView, options);
+        return alternatives.showAlternative(newView, options);
     };
 
-    UserInterfaceManager.handleEscapeEvent = function handleEscapeEvent() {
-        if (this.currentPopups.length > 0) {
-            this.currentPopups[this.currentPopups.length - 1].hide();
+    UserInterfaceManager.handleEscapeEvent = function handleEscapeEvent(click) {
+        if (currentTooltip != null) {
+            currentTooltip.hide();
+            currentTooltip = null;
+        } else if (currentPopups.length > 0) {
+            const popup = currentPopups[currentPopups.length - 1];
+
+            if (!click || !(popup instanceof StyledElements.Popover) || !popup.options.sticky) {
+                // Popup hide method will call _unregisterPopup
+                popup.hide();
+            }
         }
     };
 
     /**
      * @private
-     * Only to be used by WindowMenu.
+     *
+     * Only meant to be used by {Wirecloud.ui.WindowMenu}
      */
     UserInterfaceManager._unregisterRootWindowMenu = function _unregisterRootWindowMenu(window_menu) {
-        this._unregisterPopup(window_menu);
-        this.currentWindowMenu = null;
-        hideCover();
+        if (currentWindowMenu === window_menu) {
+            this._unregisterPopup(window_menu);
+            currentWindowMenu = null;
+            hideCover();
+        }
+
+        return this;
     };
 
     /**
      * @private
-     * Only to be used by WindowMenu.
+     *
+     * Only meant to be used by {Wirecloud.ui.WindowMenu}
      */
     UserInterfaceManager._registerRootWindowMenu = function _registerRootWindowMenu(window_menu) {
-
         if (!(window_menu instanceof Wirecloud.ui.WindowMenu)) {
             throw new TypeError('window_menu must be a WindowMenu instance');
         }
 
-        if (this.currentWindowMenu != null) {
-            this.currentWindowMenu.hide();
+        if (currentWindowMenu != null) {
+            currentWindowMenu.hide();
             hideCover();
         }
 
-        this.currentWindowMenu = window_menu;
-        this._registerPopup(window_menu);
+        currentWindowMenu = window_menu;
         showCover();
+        return this._registerPopup(window_menu);
     };
 
     UserInterfaceManager._unregisterTooltip = function _unregisterTooltip(tooltip) {
         if (currentTooltip === tooltip) {
             currentTooltip = null;
         }
+
+        return this;
     };
 
     UserInterfaceManager._unregisterPopup = function _unregisterPopup(popup) {
-        var index = this.currentPopups.indexOf(popup);
+        const index = currentPopups.indexOf(popup);
         if (index !== -1) {
-            this.currentPopups.splice(index, 1);
+            currentPopups.splice(index, 1);
         }
+
+        return this;
     };
 
     UserInterfaceManager._registerTooltip = function _registerTooltip(tooltip) {
-        if (tooltip != null && !('hide' in tooltip)) {
+        if (tooltip == null || !('hide' in tooltip)) {
             throw new TypeError('invalid tooltip parameter');
         }
 
@@ -290,19 +420,22 @@
             currentTooltip.hide();
         }
         currentTooltip = tooltip;
+
+        return this;
     };
 
     UserInterfaceManager._registerPopup = function _registerPopup(popup) {
-        if (popup != null && !('hide' in popup)) {
+        if (popup == null || !('hide' in popup)) {
             throw new TypeError('invalid popup parameter');
         }
 
         this._unregisterPopup(popup);
-        this.currentPopups.push(popup);
+        currentPopups.push(popup);
+        return this;
     };
 
     UserInterfaceManager.monitorTask = function monitorTask(task) {
-        var element = document.getElementById("loading-window");
+        const element = document.getElementById("loading-window");
         element.classList.add("in");
         element.classList.add("fade");
 
@@ -318,73 +451,13 @@
 
     UserInterfaceManager.onHistoryChange = function onHistoryChange(state) {
         this.changeCurrentView(state.view, true).then((info) => {
-            let nextView = info.in;
+            const nextView = info.in;
             if ('onHistoryChange' in nextView) {
                 nextView.onHistoryChange(state);
             }
         });
     };
 
-    var updateTaskProgress = function updateTaskProgress(task, progress) {
-        var msg;
-
-        msg = utils.gettext("%(task)s %(percentage)s%");
-        msg = utils.interpolate(msg, {task: task.title, percentage: Math.round(progress)}, true);
-        document.getElementById("loading-task-title").textContent = msg;
-
-        var list = document.createElement('ul');
-        task.subtasks.forEach(function (subtask) {
-            if (subtask.type === "then") {
-                if (subtask.subtasks.length === 0) {
-                    return;
-                }
-                subtask = subtask.subtasks[0];
-            }
-
-            if (subtask.title !== "") {
-                var msg = utils.interpolate(utils.gettext("%(subTask)s: %(percentage)s%"), {
-                    subTask: subtask.title,
-                    percentage: Math.round(subtask.progress)
-                }, true);
-                var li = document.createElement('li');
-                li.textContent = msg;
-                list.appendChild(li);
-            }
-        });
-
-        document.getElementById("loading-subtask-title").innerHTML = '';
-        document.getElementById("loading-subtask-title").appendChild(list);
-    };
-
-    var resizeUI = function resizeUI() {
-        this.alternatives.repaint();
-        // Recalculate menu positions
-        if (this.currentWindowMenu) {
-            this.currentWindowMenu.calculatePosition();
-        }
-    };
-
-    var notifyPlatformReady = function notifyPlatformReady() {
-        var loadingElement = document.getElementById("loading-window");
-        if (loadingElement.classList.contains("in")) {
-            loadingElement.classList.remove("in");
-        } else {
-            loadingElement.classList.remove("fade");
-        }
-    };
-
-    var on_click = function on_click(event) {
-        var loadingElement = document.getElementById("loading-window");
-        if (!(loadingElement.classList.contains("in"))) {
-            loadingElement.classList.remove("fade");
-        }
-    };
-
-    var on_fullscreen_change = function on_fullscreen_change(event) {
-        var baseelement = utils.getFullscreenElement() || document.body;
-        baseelement.insertBefore(coverLayerElement, baseelement.firstChild);
-    };
-
     Wirecloud.UserInterfaceManager = UserInterfaceManager;
 
-})(Wirecloud.Utils);
+})(StyledElements, Wirecloud.Utils);

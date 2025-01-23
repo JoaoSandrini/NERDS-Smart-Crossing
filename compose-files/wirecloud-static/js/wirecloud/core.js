@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2013-2017 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2019-2021 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -26,11 +27,146 @@
 
     "use strict";
 
-    var preferencesChanged = function preferencesChanged(preferences, modifiedValues) {
+    window.parent = window; // Avoid problems with embedded Wirecloud instances
+
+    const preferencesChanged = function preferencesChanged(preferences, modifiedValues) {
         /* istanbul ignore if */
         if ('language' in modifiedValues) {
             window.location.reload();
         }
+    };
+
+    const process_workspace_data = function process_workspace_data(response, options) {
+
+        const workspace_data = JSON.parse(response.responseText);
+        const workspace_resources = new Wirecloud.WorkspaceCatalogue(workspace_data.id);
+
+        return workspace_resources.reload().then(function () {
+            return new Wirecloud.Task("Processing workspace data", (resolve, reject, update) => {
+                const workspace = new Wirecloud.Workspace(workspace_data, workspace_resources);
+                cache_workspace(workspace);
+                resolve(workspace);
+            });
+        });
+    };
+
+    const get_hash_parameters = function get_hash_parameters() {
+
+        const hash = window.location.hash;
+        const hash_parameters = {};
+
+        if (hash.length > 1) {
+            hash.substring(1).split('&').forEach(function (param) {
+                const parts = param.split('=');
+                hash_parameters[decodeURIComponent(parts[0])] = decodeURIComponent(parts[1]);
+            });
+        }
+
+        if ('view' in hash_parameters) {
+            delete hash_parameters.view;
+        }
+
+        if ('tab' in hash_parameters) {
+            delete hash_parameters.tab;
+        }
+
+        return hash_parameters;
+
+    };
+
+    const switch_active_workspace = function switch_active_workspace(options, workspace) {
+
+        return new Wirecloud.Task(gettext("Switching active workspace"), (resolve, reject) => {
+
+            const state = {
+                workspace_owner: workspace.owner,
+                workspace_name: workspace.name,
+                workspace_title: workspace.title,
+                view: "workspace",
+                params: {}
+            };
+
+            if ('params' in options) {
+                state.params = options.params;
+            }
+
+            if (options.initialtab != null) {
+                state.tab = options.initialtab;
+            }
+
+            document.title = workspace.owner + '/' + workspace.name;
+
+            if (options.history === "push") {
+                Wirecloud.HistoryManager.pushState(state);
+            } else if (options.history === "replace") {
+                Wirecloud.HistoryManager.replaceState(state);
+            }
+
+            workspace.contextManager.modify({
+                params: state.params
+            });
+
+            if (this.activeWorkspace) {
+                this.activeWorkspace.unload();
+                this.activeWorkspace = null;
+            }
+
+            this.activeWorkspace = workspace;
+            Wirecloud.dispatchEvent('viewcontextchanged');
+
+            // The activeworkspacechanged event will be captured by WorkspaceView
+            Wirecloud.dispatchEvent('activeworkspacechanged', this.activeWorkspace);
+            resolve(workspace);
+        });
+
+    };
+
+    const report_error_switching_workspace = function report_error_switching_workspace(error) {
+        if (error === "Please log in") {
+            Wirecloud.login();
+        } else {
+            const dialog = new Wirecloud.ui.MessageWindowMenu(error, Wirecloud.constants.LOGGING.ERROR_MSG);
+            dialog.show();
+        }
+    };
+
+    const on_url_get = function on_url_get() {
+        const path = Wirecloud.URLs.WORKSPACE_VIEW.evaluate({owner: encodeURIComponent(this.owner), name: encodeURIComponent(this.name)});
+        return Wirecloud.location.protocol + '://' + Wirecloud.location.host + path;
+    };
+
+    const cache_workspace = function cache_workspace(workspace) {
+        Wirecloud.workspaceInstances[workspace.id] = workspace;
+        if (!(workspace.owner in Wirecloud.workspacesByUserAndName)) {
+            Wirecloud.workspacesByUserAndName[workspace.owner] = {};
+        }
+        Wirecloud.workspacesByUserAndName[workspace.owner][workspace.name] = workspace;
+
+        if (workspace instanceof Wirecloud.Workspace) {
+            workspace.addEventListener("change", (workspace, updated_attributes, old_values) => {
+                if (updated_attributes.indexOf('name') !== -1) {
+                    delete Wirecloud.workspacesByUserAndName[workspace.owner][old_values.name];
+
+                    Wirecloud.workspacesByUserAndName[workspace.owner][workspace.name] = workspace;
+                }
+            });
+        } else {
+            Object.defineProperty(workspace, 'url', {
+                get: on_url_get
+            });
+        }
+    };
+
+    const _logout = function _logout() {
+        const logout_url = new URL(Wirecloud.URLs.LOGOUT_VIEW, document.location);
+        const publicdashboard = Wirecloud.activeWorkspace.preferences.get("public");
+        const requireauth = Wirecloud.activeWorkspace.preferences.get("requireauth");
+
+        if (publicdashboard && !requireauth) {
+            const next_url = window.location.pathname + window.location.search + window.location.hash;
+            logout_url.searchParams.set("next", next_url);
+        }
+        window.location = logout_url;
     };
 
     /**
@@ -50,14 +186,15 @@
     Wirecloud.clearEventListeners = StyledElements.ObjectWithEvents.prototype.clearEventListeners;
     Wirecloud.dispatchEvent = StyledElements.ObjectWithEvents.prototype.dispatchEvent;
 
-    var onCreateWorkspaceSuccess = function onCreateWorkspaceSuccess(response) {
-        var workspace = null;
+    const onCreateWorkspaceSuccess = function onCreateWorkspaceSuccess(response) {
+        let workspace = null;
 
         if ([201, 401, 403, 409, 422, 500].indexOf(response.status) === -1) {
             return Promise.reject(utils.gettext("Unexpected response from server"));
         } else if (response.status === 422) {
+            let error;
             try {
-                var error = JSON.parse(response.responseText);
+                error = JSON.parse(response.responseText);
             } catch (e) {
                 return Promise.reject(e);
             }
@@ -109,12 +246,15 @@
         }
 
         // Init platform context
-        var contextTask = Wirecloud.io.makeRequest(Wirecloud.URLs.PLATFORM_CONTEXT_COLLECTION, {
+        const contextTask = Wirecloud.io.makeRequest(Wirecloud.URLs.PLATFORM_CONTEXT_COLLECTION, {
             method: 'GET',
-            parameters: {theme: Wirecloud.constants.CURRENT_THEME},
+            parameters: {
+                lang: Wirecloud.constants.CURRENT_LANGUAGE,
+                theme: Wirecloud.constants.CURRENT_THEME
+            },
             requestHeaders: {'Accept': 'application/json'}
         }).then((response) => {
-            var context_info = JSON.parse(response.responseText);
+            const context_info = JSON.parse(response.responseText);
             Wirecloud.constants.WORKSPACE_CONTEXT = context_info.workspace;
             Object.freeze(Wirecloud.constants.WORKSPACE_CONTEXT);
             Wirecloud.contextManager = new Wirecloud.ContextManager(Wirecloud, context_info.platform);
@@ -126,11 +266,15 @@
             return Promise.resolve();
         }).toTask("Retrieving context information");
 
-        var themeTask = contextTask.then(() => {
+        const themeTask = contextTask.then(() => {
             // Init theme
-            var url =  Wirecloud.URLs.THEME_ENTRY.evaluate({name: Wirecloud.contextManager.get('theme')}) + "?v=" + Wirecloud.contextManager.get('version_hash');
+            const url =  Wirecloud.URLs.THEME_ENTRY.evaluate({name: Wirecloud.contextManager.get('theme')});
             return Wirecloud.io.makeRequest(url, {
                 method: 'GET',
+                parameters: {
+                    lang: Wirecloud.constants.CURRENT_LANGUAGE,
+                    v: Wirecloud.contextManager.get('version_hash')
+                },
                 requestHeaders: {'Accept': 'application/json'}
             }).then((response) => {
                 Wirecloud.currentTheme = new Wirecloud.ui.Theme(JSON.parse(response.responseText));
@@ -139,48 +283,49 @@
             });
         });
 
-        var localCatalogueTask = contextTask.then(() => {
+        const localCatalogueTask = contextTask.then(() => {
             return Wirecloud.LocalCatalogue.reload();
         });
 
         // Init platform preferences
-        var preferencesTask = Wirecloud.io.makeRequest(Wirecloud.URLs.PLATFORM_PREFERENCES, {
+        const preferencesTask = Wirecloud.io.makeRequest(Wirecloud.URLs.PLATFORM_PREFERENCES, {
             method: 'GET',
             requestHeaders: {'Accept': 'application/json'}
         }).then((response) => {
-            var url, values = JSON.parse(response.responseText);
+            const values = JSON.parse(response.responseText);
 
             Wirecloud.preferences = Wirecloud.PreferenceManager.buildPreferences('platform', values);
             Wirecloud.preferences.addEventListener('post-commit', preferencesChanged.bind(this));
             if ('WEBSOCKET' in Wirecloud.URLs) {
-                url = new URL(Wirecloud.URLs.WEBSOCKET, document.location);
+                const url = new URL(Wirecloud.URLs.WEBSOCKET, document.location);
                 url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-                var livews = new WebSocket(url);
-                livews.addEventListener('message', function (event) {
-                    var msg = JSON.parse(event.data);
+                const livews = new WebSocket(url);
+                livews.addEventListener('message', (event) => {
+                    const msg = JSON.parse(event.data);
 
                     Wirecloud.live.dispatchEvent(msg.category, msg);
                 });
-                var LiveManager = function LiveManager() {
-                    StyledElements.ObjectWithEvents.call(this, ["workspace", "component"]);
+                const LiveManager = class LiveManager extends StyledElements.ObjectWithEvents {
+                    constructor() {
+                        super(["workspace", "component"]);
+                    }
                 };
-                utils.inherit(LiveManager, StyledElements.ObjectWithEvents);
                 Wirecloud.live = new LiveManager();
             }
             return Promise.resolve();
         });
 
         // Load workspace list
-        var workspaceListTask = Wirecloud.io.makeRequest(Wirecloud.URLs.WORKSPACE_COLLECTION, {
+        const workspaceListTask = Wirecloud.io.makeRequest(Wirecloud.URLs.WORKSPACE_COLLECTION, {
             method: 'GET',
             requestHeaders: {'Accept': 'application/json'}
         }).then((response) => {
-            var workspaces = JSON.parse(response.responseText);
+            const workspaces = JSON.parse(response.responseText);
             workspaces.forEach(cache_workspace);
             return Promise.resolve();
         });
 
-        var initTask = new Wirecloud.Task(gettext('Retrieving WireCloud code'), function (resolve) {
+        let initTask = new Wirecloud.Task(gettext('Retrieving WireCloud code'), function (resolve) {
             resolve();
         }).then(() => {
             return new Wirecloud.Task(gettext('Retrieving initial data'), [
@@ -194,7 +339,7 @@
         if (options.preventDefault !== true) {
             initTask = initTask.then(() => {
                 Wirecloud.HistoryManager.init();
-                var state = Wirecloud.HistoryManager.getCurrentState();
+                const state = Wirecloud.HistoryManager.getCurrentState();
                 Wirecloud.UserInterfaceManager.changeCurrentView('workspace', true);
 
                 Wirecloud.dispatchEvent('loaded');
@@ -204,11 +349,12 @@
                         name: state.workspace_name
                     }, {
                         initialtab: state.tab,
-                        history: "replace"
+                        history: "replace",
+                        params: get_hash_parameters()
                     }
                 );
             }, (error) => {
-                var msg = gettext("Error loading WireCloud");
+                const msg = gettext("Error loading WireCloud");
                 (new Wirecloud.ui.MessageWindowMenu(msg, Wirecloud.constants.LOGGING.ERROR_MSG)).show();
                 return Promise.reject();
             });
@@ -219,7 +365,7 @@
             return Promise.reject();
         });
 
-        var task = initTask.toTask(gettext('Loading WireCloud Platform'));
+        const task = initTask.toTask(gettext('Loading WireCloud Platform'));
         if (options.preventDefault !== true) {
             Wirecloud.UserInterfaceManager.monitorTask(task);
         }
@@ -228,12 +374,29 @@
     };
 
     /**
+     * Redirects to the login view.
+     **/
+    Wirecloud.login = function login(force) {
+        const login_url = new URL(Wirecloud.URLs.LOGIN_VIEW, document.location);
+
+        const next_url = window.location.pathname + window.location.search + window.location.hash;
+        if (next_url !== '/') {
+            login_url.searchParams.set("next", next_url);
+        }
+        if (force) {
+            login_url.searchParams.set("force", "true");
+        }
+
+        window.location = login_url;
+    };
+
+    /**
      * Logouts from WireCloud
      */
     Wirecloud.logout = function logout() {
         if (Wirecloud.constants.FIWARE_PORTALS) {
 
-            var promises = [];
+            const promises = [];
             Wirecloud.constants.FIWARE_PORTALS.forEach((portal) => {
                 if ('logout_path' in portal) {
                     promises.push(Wirecloud.io.makeRequest(portal.url + portal.logout_path, {
@@ -246,10 +409,10 @@
                     }).catch(function (error) {}));
                 }
             });
-            Promise.all(promises).then(() => {window.location = Wirecloud.URLs.LOGOUT_VIEW;});
+            Promise.all(promises).then(_logout(), _logout());
 
         } else {
-            window.location = Wirecloud.URLs.LOGOUT_VIEW;
+            _logout();
         }
 
     };
@@ -275,7 +438,7 @@
      * Wirecloud.loadWorkspace({owner: "user", name: "dashboard"});
      */
     Wirecloud.loadWorkspace = function loadWorkspace(workspace, options) {
-        var url;
+        let url;
 
         if ('id' in workspace) {
             url = Wirecloud.URLs.WORKSPACE_ENTRY.evaluate({'workspace_id': workspace.id});
@@ -289,8 +452,12 @@
             method: "GET",
             requestHeaders: {'Accept': 'application/json'}
         }).renameTask(utils.gettext("Requesting workspace data")).then((response) => {
-            if (response.status !== 200) {
-                throw new Error("Unexpected error code");
+            if ([200, 401, 403, 500].indexOf(response.status) === -1) {
+                return Promise.reject(utils.gettext("Unexpected response from server"));
+            } else if (response.status === 403 && workspace.public === true) {
+                return Promise.reject('Please log in');
+            } else if (response.status !== 200) {
+                return Promise.reject(Wirecloud.GlobalLogManager.parseErrorResponse(response));
             }
             return process_workspace_data.call(this, response, options);
         }).toTask("Downloading workspace");
@@ -314,8 +481,6 @@
      * });
      */
     Wirecloud.changeActiveWorkspace = function changeActiveWorkspace(workspace, options) {
-        var workspace_full_name, state;
-
         options = utils.merge({
             initialtab: null,
             history: "push"
@@ -329,25 +494,11 @@
             workspace = this.workspaceInstances[workspace.id];
         }
 
-        state = {
-            workspace_owner: workspace.owner,
-            workspace_name: workspace.name,
-            workspace_title: workspace.title,
-            view: "workspace"
-        };
-        if (options.initialtab != null) {
-            state.tab = options.initialtab;
-        }
-        workspace_full_name = workspace.owner + '/' + workspace.name;
-        document.title = workspace_full_name;
-        if (options.history === "push") {
-            Wirecloud.HistoryManager.pushState(state);
-        } else if (options.history === "replace") {
-            Wirecloud.HistoryManager.replaceState(state);
-        }
-
         return this.loadWorkspace(workspace, options)
-            .then(switch_active_workspace.bind(this))
+            .then(
+                switch_active_workspace.bind(this, options),
+                report_error_switching_workspace
+            )
             .toTask(gettext("Switching active workspace"));
     };
 
@@ -359,8 +510,12 @@
      * @param {Object} options
      * - `allow_renaming` (Boolean, default: `true`)
      * - `mashup` (String): Mashup reference to use as template.
-     * - `name` (String): This options is required if the `mashup` and
-     *   `workspace` options are not used and optional in any other case.
+     * - `name` (String): This options is required if neither the `mashup` nor
+     *   the `workspace` options are used and the `title` option is also not
+     *   used. This parameter is optional in any other case.
+     * - `title` (String): This options is required if neither the `mashup` nor
+     *   the `workspace` options are used and the `name` option is also not
+     *   used. This parameter is optional in any other case.
      * - `workspace` (String): id of the workspace to clone.
      *
      * @returns {Wirecloud.Task}
@@ -379,14 +534,12 @@
      * Wirecloud.createWorkspace({workspace: 123});
      */
     Wirecloud.createWorkspace = function createWorkspace(options) {
-        var body;
-
         options = utils.merge({
             allow_renaming: true,
             dry_run: false
         }, options);
 
-        body = {
+        const body = {
             allow_renaming: !!options.allow_renaming,
             dry_run: !!options.dry_run
         };
@@ -456,7 +609,7 @@
             workspace = this.workspacesByUserAndName[workspace.owner][workspace.name];
         }
 
-        var url = Wirecloud.URLs.WORKSPACE_ENTRY.evaluate({
+        const url = Wirecloud.URLs.WORKSPACE_ENTRY.evaluate({
             workspace_id: workspace.id
         });
 
@@ -472,7 +625,7 @@
 
             if (workspace.id in this.workspaceInstances) {
                 // Remove internal references
-                var stored_workspace = this.workspaceInstances[workspace.id];
+                const stored_workspace = this.workspaceInstances[workspace.id];
                 delete this.workspaceInstances[workspace.id];
                 delete this.workspacesByUserAndName[stored_workspace.owner][stored_workspace.name];
             }
@@ -522,7 +675,7 @@
             throw new TypeError('workspace and mashup options cannot be used at the same time');
         }
 
-        var url = Wirecloud.URLs.WORKSPACE_MERGE.evaluate({to_ws_id: target_workspace.id});
+        const url = Wirecloud.URLs.WORKSPACE_MERGE.evaluate({to_ws_id: target_workspace.id});
 
         return Wirecloud.io.makeRequest(url, {
             method: 'POST',
@@ -536,8 +689,9 @@
             if ([204, 401, 403, 404, 422, 500].indexOf(response.status) === -1) {
                 return Promise.reject(utils.gettext("Unexpected response from server"));
             } else if (response.status === 422) {
+                let error;
                 try {
-                    var error = JSON.parse(response.responseText);
+                    error = JSON.parse(response.responseText);
                 } catch (e) {
                     return Promise.reject(utils.gettext("Unexpected response from server"));
                 }
@@ -546,7 +700,7 @@
                 return Promise.reject(Wirecloud.GlobalLogManager.parseErrorResponse(response));
             }
 
-            var workspace = {
+            const workspace = {
                 id: target_workspace.id,
                 owner: target_workspace.owner,
                 name: target_workspace.name
@@ -556,65 +710,43 @@
         });
     };
 
-
-    var process_workspace_data = function process_workspace_data(response, options) {
-
-        var workspace_data = JSON.parse(response.responseText);
-        var workspace_resources = new Wirecloud.WorkspaceCatalogue(workspace_data.id);
-
-        return workspace_resources.reload().then(function () {
-            return new Wirecloud.Task("Processing workspace data", (resolve, reject, update) => {
-                var workspace = new Wirecloud.Workspace(workspace_data, workspace_resources);
-                cache_workspace(workspace);
-                resolve(workspace);
-            });
-        });
-    };
-
-    var switch_active_workspace = function switch_active_workspace(workspace) {
-
-        return new Wirecloud.Task(gettext("Switching active workspace"), (resolve, reject) => {
-
-            if (this.activeWorkspace) {
-                this.activeWorkspace.unload();
-                this.activeWorkspace = null;
-            }
-
-            this.activeWorkspace = workspace;
-            Wirecloud.dispatchEvent('viewcontextchanged');
-
-            // The activeworkspacechanged event will be captured by WorkspaceView
-            Wirecloud.dispatchEvent('activeworkspacechanged', this.activeWorkspace);
-            resolve(workspace);
-        });
-
-    };
-
-    var on_url_get = function on_url_get() {
-        var path = Wirecloud.URLs.WORKSPACE_VIEW.evaluate({owner: encodeURIComponent(this.owner), name: encodeURIComponent(this.name)});
-        return Wirecloud.location.protocol + '://' + Wirecloud.location.host + path;
-    };
-
-    var cache_workspace = function cache_workspace(workspace) {
-        Wirecloud.workspaceInstances[workspace.id] = workspace;
-        if (!(workspace.owner in Wirecloud.workspacesByUserAndName)) {
-            Wirecloud.workspacesByUserAndName[workspace.owner] = {};
-        }
-        Wirecloud.workspacesByUserAndName[workspace.owner][workspace.name] = workspace;
-
-        if (workspace instanceof Wirecloud.Workspace) {
-            workspace.addEventListener("change", (workspace, updated_attributes, old_values) => {
-                if (updated_attributes.indexOf('name') !== -1) {
-                    delete Wirecloud.workspacesByUserAndName[workspace.owner][old_values.name];
-
-                    Wirecloud.workspacesByUserAndName[workspace.owner][workspace.name] = workspace;
+    /**
+     * Logs in as another user/organization using current user
+     * credentials/permissions
+     *
+     * @since 1.4
+     *
+     * @param {String} targetuser
+     *     Username of the user to change to. Current user should be and
+     *     administrator or being owner of the target organization.
+     *
+     * @returns {Wirecloud.Task}
+     *
+     * @example
+     * Wirecloud.switchUser("usertoimpersonate").then(
+     *   () => {
+     *     // User switched successfully
+     *   },
+     *   (error) => {
+     *     // Error switching current user
+     *   };
+     */
+    Wirecloud.switchUser = function switchUser(targetuser) {
+        return Wirecloud.io.makeRequest(Wirecloud.URLs.SWITCH_USER_SERVICE, {
+            method: 'POST',
+            contentType: 'application/json',
+            postBody: JSON.stringify({username: targetuser})
+        }).then(
+            (response) => {
+                if ([401, 403, 500].indexOf(response.status) !== -1) {
+                    return Promise.reject(Wirecloud.GlobalLogManager.parseErrorResponse(response));
+                } else if (response.status !== 204) {
+                    return Promise.reject(utils.gettext("Unexpected response from server"));
                 }
-            });
-        } else {
-            Object.defineProperty(workspace, 'url', {
-                get: on_url_get
-            });
-        }
+                const location = response.getHeader('Location');
+                document.location.assign(location != null ? location : Wirecloud.URLs.ROOT_URL);
+            }
+        );
     };
 
 })(Wirecloud.Utils);

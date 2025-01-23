@@ -14,18 +14,18 @@ services:
       - "${WILMA_PORT}"
     environment:
       - DEBUG=pep-proxy:*
-      - PEP_PROXY_DEBUG=true
-      - PEP_PROXY_APP_HOST=orion
-      - PEP_PROXY_APP_PORT=${ORION_PORT}
+      - PEP_PROXY_DEBUG=false
+      - PEP_PROXY_APP_HOST=scorpio
+      - PEP_PROXY_APP_PORT=9090
       - PEP_PROXY_PORT=${WILMA_PORT}
       - PEP_PROXY_IDM_HOST=keyrock
       - PEP_PROXY_HTTPS_ENABLED=false
-      - PEP_PROXY_AUTH_ENABLED=true
+      - PEP_PROXY_AUTH_ENABLED=false
       - PEP_PROXY_IDM_SSL_ENABLED=false
       - PEP_PROXY_IDM_PORT=${KEYROCK_PORT}
-      - PEP_PROXY_APP_ID=b6486dea-9157-4edb-94f9-e17eeb64597f
-      - PEP_PROXY_USERNAME=pep_proxy_f05e351d-fee6-4c4f-9256-9c1d34745ac1
-      - PEP_PASSWORD=pep_proxy_ba31bfe2-d147-4c06-b6c2-20a5eda5b924
+      - PEP_PROXY_APP_ID=30df5445-79a7-4fd0-9513-6c826fcd603a
+      - PEP_PROXY_USERNAME=pep_proxy_475ff6dc-8a65-4bc5-ac28-391fe43af3b8
+      - PEP_PASSWORD=pep_proxy_8dce1abd-f863-4609-b83e-477618cfbaf2
       - PEP_PROXY_PDP=idm
       - PEP_PROXY_MAGIC_KEY=1234
       - PEP_PROXY_PUBLIC_PATHS=/version

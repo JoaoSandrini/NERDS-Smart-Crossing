@@ -1,0 +1,12 @@
+services:
+    ngsi-proxy:
+        image: fiware/ngsiproxy
+        hostname: ngsi-proxy
+        container_name: ngsi-proxy
+        expose:
+            - "3005"
+        ports:
+            - "3005:3005"
+        environment:
+            - PORT=3005
+            - TRUST_PROXY_HEADERS=1

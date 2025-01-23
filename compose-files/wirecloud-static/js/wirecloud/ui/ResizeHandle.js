@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2008-2016 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2020 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -26,17 +27,16 @@
 
     "use strict";
 
-    var returnTrue = function returnTrue() {
+    const returnTrue = function returnTrue() {
         return true;
     };
 
-    var ResizeHandle = function ResizeHandle(resizableElement, handleElement, data, onStart, onResize, onFinish, canBeResized) {
-        var xDelta = 0, yDelta = 0;
-        var xStart = 0, yStart = 0;
-        var scrollDelta, scrollStart = 0;
-        var dragboardCover;
-        var x, y;
-        var endresize, resize, startresize, scroll;
+    const ResizeHandle = function ResizeHandle(resizableElement, handleElement, data, onStart, onResize, onFinish, canBeResized) {
+        let xDelta = 0, yDelta = 0;
+        let xStart = 0, yStart = 0;
+        let scrollDelta, scrollStart = 0;
+        let dragboardCover;
+        let endresize, resize, startresize, scroll;
         canBeResized = canBeResized ? canBeResized : returnTrue;
 
 
@@ -76,7 +76,7 @@
 
         // fire each time the mouse is moved while resizing
         resize = function resize(e) {
-            var clientX, clientY;
+            let clientX, clientY;
 
             if ('touches' in e) {
                 clientX = e.touches[0].clientX;
@@ -90,17 +90,17 @@
             xDelta = clientX - xStart;
             yDelta = clientY - yStart;
 
-            onResize(resizableElement, handleElement, data, x + xDelta, y + yDelta - scrollDelta);
+            onResize(resizableElement, handleElement, data, xDelta, yDelta - scrollDelta);
         };
 
         // fire each time the dragboard is scrolled while dragging
         scroll = function scroll() {
-            var dragboard = dragboardCover.parentNode;
+            const dragboard = dragboardCover.parentNode;
             dragboardCover.style.height = dragboard.scrollHeight + "px";
-            var scrollTop = parseInt(dragboard.scrollTop, 10);
+            const scrollTop = parseInt(dragboard.scrollTop, 10);
             scrollDelta = scrollStart - scrollTop;
 
-            onResize(resizableElement, handleElement, data, x + xDelta, y + yDelta - scrollDelta);
+            onResize(resizableElement, handleElement, data, xDelta, yDelta - scrollDelta);
         };
 
         // initiate the resizing
@@ -127,14 +127,12 @@
                 xStart = e.clientX;
                 yStart = e.clientY;
             }
-            x = resizableElement.offsetLeft + handleElement.offsetLeft + (handleElement.offsetWidth / 2);
-            y = resizableElement.offsetTop + handleElement.offsetTop + (handleElement.offsetHeight / 2);
             document.addEventListener("mouseup", endresize, false);
             document.addEventListener("touchend", endresize, false);
             document.addEventListener("mousemove", resize, false);
             document.addEventListener("touchmove", resize, false);
 
-            var dragboard = document.body;
+            const dragboard = document.body;
             dragboardCover = document.createElement("div");
             dragboardCover.className = "cover";
             dragboardCover.addEventListener("mouseup", endresize, true);

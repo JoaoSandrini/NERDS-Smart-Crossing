@@ -1,5 +1,4 @@
 services:
-
     nginx:
         restart: always
         image: nginx
@@ -14,14 +13,14 @@ services:
 
 
 
-    postgres:
-        restart: always
-        image: postgres
-        container_name: wirecloud-postgres
-        environment:
-            - POSTGRES_PASSWORD=wirepass   # Change this password!
-        volumes:
-            - ./postgres-data:/var/lib/postgresql/data
+#    postgres:
+#        restart: always
+#        image: postgres
+#        container_name: wirecloud-postgres
+#        environment:
+#            - POSTGRES_PASSWORD=wirepass   # Change this password!
+#        volumes:
+#            - ./postgres-data:/var/lib/postgresql/data
 
 
 
@@ -44,7 +43,7 @@ services:
 
     wirecloud:
         restart: always
-        image: fiware/wirecloud
+        image: joaosnd/wirecloud-ld:1.0
         container_name: wirecloud
         depends_on:
             - postgres
@@ -52,20 +51,18 @@ services:
             - memcached
         environment:
             - DEBUG=True
-            # - DEFAULT_THEME=wirecloud.defaulttheme
+            - DEFAULT_THEME=wirecloud.defaulttheme
             - DB_HOST=postgres
-            - DB_PASSWORD=wirepass   # Change this password!
+            - DB_NAME=postgres
+            - DB_USERNAME=postgres
+            - DB_PASSWORD=wirepass  # Change this password!
             - FORWARDED_ALLOW_IPS=*
             - ELASTICSEARCH2_URL=http://elasticsearch:9200/
             - MEMCACHED_LOCATION=memcached:11211
             - FIWARE_IDM_URL=http://localhost:3000
             - FIWARE_IDM_SERVER=http://host.docker.internal:3000
-            - SOCIAL_AUTH_FIWARE_KEY=b6486dea-9157-4edb-94f9-e17eeb64597f  # Keyrock's OAuth2 client ID 
-            - SOCIAL_AUTH_FIWARE_SECRET=ee1b753d-cfa7-4e5f-847e-e1039030a7c4 # Keyrock's OAuth2 client Secret
-            # Uncomment the following environment variables to enable IDM integration
-            #- FIWARE_IDM_SERVER=${FIWARE_IDM_SERVER}
-            #- SOCIAL_AUTH_FIWARE_KEY=${SOCIAL_AUTH_FIWARE_KEY}
-            #- SOCIAL_AUTH_FIWARE_SECRET=${SOCIAL_AUTH_FIWARE_SECRET}
+            - SOCIAL_AUTH_FIWARE_KEY=30df5445-79a7-4fd0-9513-6c826fcd603a  # Keyrock's OAuth2 client ID 
+            - SOCIAL_AUTH_FIWARE_SECRET=e487c511-f1c1-4e86-aac4-894e4d11656a # Keyrock's OAuth2 client Secret
         volumes:
             - ./wirecloud-data:/opt/wirecloud_instance/data
             - ./wirecloud-static:/var/www/static

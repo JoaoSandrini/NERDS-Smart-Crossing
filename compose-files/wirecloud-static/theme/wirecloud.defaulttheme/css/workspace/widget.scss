@@ -14,6 +14,7 @@
     display: flex;
     flex-direction: column;
     margin: 0px;
+    background: none;
 
     &.dragging {
         transition: opacity 0.35s ease-in;
@@ -28,10 +29,11 @@
 }
 
 .wc-widget-heading {
-    position: relative;
+    position: absolute;
     flex-grow: 0;
     display: none;
     width: 100%;
+    z-index: 4;
 
     .wc-moveable-widget > & {
         cursor: -webkit-grab;
@@ -39,6 +41,9 @@
         cursor: grab;
     }
 
+    .wc-titled-widget > & {
+        position: relative;
+    }
     .wc-workspace-editing &,
     .wc-minimized-widget &,
     .wc-titled-widget > & {
@@ -65,16 +70,23 @@
         transition: color 1s ease-in;
     }
 
-    & .disabled {
-        display: none;
-    }
 }
 
 .wc-widget-body {
-    background: $widget-bg;
     flex-grow: 1;
     overflow: hidden;
     position: relative;
+    border-radius: ($panel-border-radius - 1);
+
+    .wc-titled-widget > & {
+        border-top-left-radius: 0px;
+        border-top-right-radius: 0px;
+    }
+
+    .wc-workspace-editing > & {
+        border-bottom-left-radius: 0px;
+        border-bottom-right-radius: 0px;
+    }
 
     & > iframe {
         position: absolute;
@@ -221,6 +233,7 @@
 
 .wc-floating-widget {
     @include z-depth(2);
+    transition: none;
 
     &.wc-missing-widget {
         @include z-depth(2, $color: $state-danger-border);

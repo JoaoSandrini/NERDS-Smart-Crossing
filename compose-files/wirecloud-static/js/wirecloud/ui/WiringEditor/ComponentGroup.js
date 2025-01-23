@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2015-2016 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2020 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -26,78 +27,10 @@
 
     "use strict";
 
-    // =========================================================================
-    // CLASS DEFINITION
-    // =========================================================================
+    const events = ['btncreate.click'];
 
-    ns.ComponentGroup = function ComponentGroup(resource, title) {
-        se.StyledElement.call(this, events);
-
-        title = title || utils.gettext("Create");
-
-        this.titleElement = document.createElement('span');
-        this.tooltip = new se.Tooltip();
-        this.tooltip.bind(this.titleElement);
-
-        this.imageElement = document.createElement('img');
-        this.imageElement.onerror = image_onerror.bind(this);
-
-        var version = new se.Select({
-            initialValue: resource.version,
-            initialEntries: orderVersions([resource.version].concat(resource.others))
-        });
-        version.addEventListener('change', version_onchange.bind(this));
-
-        var button = new se.Button({
-            class: 'btn-create wc-create-resource-component',
-            title: title,
-            iconClass: 'fa fa-plus'
-        });
-        button.addEventListener('click', function () {
-            this.dispatchEvent('btncreate.click', button);
-        }.bind(this));
-
-        this.descriptionElement = document.createElement('div');
-        this.descriptionElement.className = "text-muted";
-
-        this.wrapperElement = (new se.GUIBuilder()).parse(Wirecloud.currentTheme.templates['wirecloud/wiring/component_group'], {
-            title: this.titleElement,
-            image: this.imageElement,
-            versionselect: version,
-            createbutton: button,
-            vendor: resource.vendor,
-            description: this.descriptionElement
-        }).children[1];
-
-        this.components = {};
-
-        Object.defineProperties(this, {
-            id: {value: resource.vendor + "/" + resource.name}
-        });
-
-        this.wrapperElement.setAttribute('data-id', this.id);
-        version_onchange.call(this, version);
-    };
-
-    utils.inherit(ns.ComponentGroup, se.StyledElement, {
-
-        addComponent: function addComponent(component) {
-            if (!(component.id in this.components)) {
-                this.components[component.id] = component.appendTo(this.wrapperElement);
-            }
-            return this;
-        }
-
-    });
-
-    // =========================================================================
-    // PRIVATE MEMBERS
-    // =========================================================================
-
-    var events = ['btncreate.click'];
-
-    var version_onchange = function version_onchange(element) {
-        var version = element.getValue();
+    const version_onchange = function version_onchange(element) {
+        const version = element.getValue();
 
         this.meta = Wirecloud.LocalCatalogue.getResourceId(this.id + "/" + version.text);
 
@@ -107,8 +40,8 @@
         setImage.call(this, this.meta.image);
     };
 
-    var setImage = function setImage(imageURL) {
-        var thumbnailElement = this.imageElement.parentElement;
+    const setImage = function setImage(imageURL) {
+        const thumbnailElement = this.imageElement.parentElement;
 
         thumbnailElement.classList.remove('se-thumbnail-missing');
         thumbnailElement.innerHTML = "";
@@ -123,12 +56,12 @@
         }
     };
 
-    var image_onerror = function image_onerror() {
+    const image_onerror = function image_onerror() {
         this.imageElement.parentElement.classList.add('se-thumbnail-missing');
         this.imageElement.parentElement.appendChild(document.createTextNode(utils.gettext("No image available")));
     };
 
-    var orderVersions = function orderVersions(versions) {
+    const orderVersions = function orderVersions(versions) {
         versions = versions.sort(function (version1, version2) {
             return -version1.compareTo(version2);
         });
@@ -142,5 +75,65 @@
 
         return versions;
     };
+
+    ns.ComponentGroup = class ComponentGroup extends se.StyledElement {
+
+        constructor(resource, title) {
+            super(events);
+
+            title = title || utils.gettext("Create");
+
+            this.titleElement = document.createElement('span');
+            this.tooltip = new se.Tooltip();
+            this.tooltip.bind(this.titleElement);
+
+            this.imageElement = document.createElement('img');
+            this.imageElement.onerror = image_onerror.bind(this);
+
+            const version = new se.Select({
+                initialValue: resource.version,
+                initialEntries: orderVersions([resource.version].concat(resource.others))
+            });
+            version.addEventListener('change', version_onchange.bind(this));
+
+            const button = new se.Button({
+                class: 'btn-create wc-create-resource-component',
+                title: title,
+                iconClass: 'fas fa-plus'
+            });
+            button.addEventListener('click', function () {
+                this.dispatchEvent('btncreate.click', button);
+            }.bind(this));
+
+            this.descriptionElement = document.createElement('div');
+            this.descriptionElement.className = "text-muted";
+
+            this.wrapperElement = (new se.GUIBuilder()).parse(Wirecloud.currentTheme.templates['wirecloud/wiring/component_group'], {
+                title: this.titleElement,
+                image: this.imageElement,
+                versionselect: version,
+                createbutton: button,
+                vendor: resource.vendor,
+                description: this.descriptionElement
+            }).children[1];
+
+            this.components = {};
+
+            Object.defineProperties(this, {
+                id: {value: resource.vendor + "/" + resource.name}
+            });
+
+            this.wrapperElement.setAttribute('data-id', this.id);
+            version_onchange.call(this, version);
+        }
+
+        addComponent(component) {
+            if (!(component.id in this.components)) {
+                this.components[component.id] = component.appendTo(this.wrapperElement);
+            }
+            return this;
+        }
+
+    }
 
 })(Wirecloud.ui.WiringEditor, StyledElements, StyledElements.Utils);

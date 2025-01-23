@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2015-2016 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2021 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -26,50 +27,44 @@
 
     "use strict";
 
-    // =========================================================================
-    // CLASS DEFINITION
-    // =========================================================================
-
     /**
      * Create a new instance of class BehaviourPrefs.
      * @extends {DynamicMenuItems}
      *
      * @constructor
      */
-    ns.BehaviourPrefs = function BehaviourPrefs(behaviour) {
-        this.behaviour = behaviour;
-    };
+    ns.BehaviourPrefs = class BehaviourPrefs extends se.DynamicMenuItems {
 
-    utils.inherit(ns.BehaviourPrefs, se.DynamicMenuItems, {
+        constructor(behaviour) {
+            super();
+            this.behaviour = behaviour;
+        }
 
-        _createMenuItem: function _createMenuItem(title, iconClass, onclick, isEnabled) {
-            var item;
-
-            item = new se.MenuItem(utils.gettext(title), onclick);
-            item.addIconClass('fa fa-' + iconClass);
+        _createMenuItem(title, iconClass, onclick, isEnabled) {
+            const item = new se.MenuItem(utils.gettext(title), onclick);
+            item.addIconClass(iconClass);
 
             if (isEnabled != null) {
                 item.enabled = isEnabled.call(this.behaviour);
             }
 
             return item;
-        },
+        }
 
         /**
          * @override
          */
-        build: function build() {
+        build() {
             return [
-                this._createMenuItem("Logs", "tags", function () {
-                    this.showLogs();
-                }.bind(this.behaviour)),
-                this._createMenuItem("Settings", "gear", function () {
-                    this.showSettings();
-                }.bind(this.behaviour))
+                this._createMenuItem("Logs", "fas fa-tags", () => {
+                    this.behaviour.showLogs();
+                }),
+                this._createMenuItem("Settings", "fas fa-cog", () => {
+                    this.behaviour.showSettings();
+                })
             ];
         }
 
-
-    });
+    }
 
 })(Wirecloud.ui.WiringEditor, StyledElements, StyledElements.Utils);

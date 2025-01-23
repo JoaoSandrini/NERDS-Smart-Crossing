@@ -1,0 +1,49 @@
+{
+  "name": "ngsi-proxy",
+  "version": "1.2.2",
+  "description": "Receive push notifications on web pages from FIWARE NGSI context brokers",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/conwetlab/ngsi-proxy.git"
+  },
+  "keywords": [
+    "context broker",
+    "fiware",
+    "FIWARE",
+    "fiware-orion",
+    "iot",
+    "IoT",
+    "NGSI",
+    "orion",
+    "wirecloud"
+  ],
+  "author": "CoNWeT Lab., Universidad Politecnica de Madrid",
+  "license": "AGPLv3 with linking exception",
+  "engines": {
+    "node": ">= 0.10.11"
+  },
+  "bugs": {
+    "url": "https://github.com/conwetlab/ngsi-proxy/issues"
+  },
+  "homepage": "https://github.com/conwetlab/ngsi-proxy",
+  "dependencies": {
+    "compression": "^1.7.2",
+    "errorhandler": "^1.5.0",
+    "express": "4.16.3",
+    "morgan": "^1.9.1",
+    "uuid": "^3.0.1"
+  },
+  "bin": {
+    "ngsi-proxy": "app.js"
+  },
+  "devDependencies": {
+    "coveralls": "^3.0.4",
+    "eventsource": "^1.0.5",
+    "istanbul": "^0.4.5",
+    "jasmine": "^3.1.0",
+    "request": "^2.88.0"
+  },
+  "scripts": {
+    "test": "./node_modules/istanbul/lib/cli.js cover -- ./node_modules/jasmine/bin/jasmine.js --config=jasmine.json"
+  }
+}

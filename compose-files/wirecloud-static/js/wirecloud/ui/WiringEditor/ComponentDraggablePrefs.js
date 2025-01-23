@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2015-2016 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2021 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -26,9 +27,64 @@
 
     "use strict";
 
-    // =========================================================================
-    // CLASS DEFINITION
-    // =========================================================================
+    const canRename = function canRename() {
+        return this.type === 'widget' && this._component.isAllowed('rename', 'editor');
+    };
+
+    const canUpgrade = function canUpgrade() {
+        return !this.background && this._component.isAllowed('upgrade', 'editor') && Wirecloud.LocalCatalogue.hasAlternativeVersion(this._component.meta);
+    };
+
+    const canCollapseEndpoints = function canCollapseEndpoints() {
+        return this.hasEndpoints() && !this.background && !this.orderingEndpoints;
+    };
+
+    const canDeleteCascade = function canDeleteCascade() {
+        return this.isRemovable();
+    };
+
+    const canOrderEndpoints = function canOrderEndpoints() {
+        return this.hasOrderableEndpoints() && !this.background && !this.missing && !this.collapsed;
+    };
+
+    const canShowSettings = function canShowSettings() {
+        return this.hasSettings() && this._component.isAllowed('configure', 'editor');
+    };
+
+    const getItemCollapse = function getItemCollapse() {
+        if (this.collapsed) {
+            return {title: utils.gettext("Expand"), icon: "far fa-caret-square-down"};
+        } else {
+            return {title: utils.gettext("Collapse"), icon: "far fa-caret-square-up"};
+        }
+    };
+
+    const getItemOrderEndpoints = function getItemOrderEndpoints() {
+        if (this.orderingEndpoints) {
+            return {title: utils.gettext("Stop ordering"), icon: "fas fa-sort"};
+        } else {
+            return {title: utils.gettext("Order endpoints"), icon: "fas fa-sort"};
+        }
+    };
+
+    const showRenameModal = function showRenameModal() {
+        const dialog = new Wirecloud.ui.FormWindowMenu(
+            [
+                {name: 'title', label: utils.gettext("Title"), type: 'text', placeholder: this.component.title},
+            ],
+            utils.interpolate(utils.gettext("Rename %(type)s"), this.component),
+            "wc-component-rename-modal"
+        );
+
+        dialog.executeOperation = function (data) {
+            if (data.title) {
+                this.component._component.rename(data.title);
+            }
+        }.bind(this);
+
+        dialog.show();
+        dialog.setValue({title: this.component.title});
+    };
 
     /**
      * Create a new instance of class ComponentDraggablePrefs.
@@ -36,34 +92,33 @@
      *
      * @constructor
      */
-    ns.ComponentDraggablePrefs = function ComponentDraggablePrefs(component) {
-        this.component = component;
-    };
+    ns.ComponentDraggablePrefs = class ComponentDraggablePrefs extends se.DynamicMenuItems {
 
-    utils.inherit(ns.ComponentDraggablePrefs, se.DynamicMenuItems, {
+        constructor(component) {
+            super();
+            this.component = component;
+        }
 
-        _createMenuItem: function _createMenuItem(title, iconClass, onclick, isEnabled) {
-            var item;
-
-            item = new se.MenuItem(title, onclick);
-            item.addIconClass('fa fa-' + iconClass);
+        _createMenuItem(title, iconClass, onclick, isEnabled) {
+            const item = new se.MenuItem(title, onclick);
+            item.addIconClass(iconClass);
 
             if (isEnabled != null) {
                 item.enabled = isEnabled.call(this.component);
             }
 
             return item;
-        },
+        }
 
         /**
          * @override
          */
-        build: function build() {
-            var item1 = getItemCollapse.call(this.component),
+        build() {
+            const item1 = getItemCollapse.call(this.component),
                 item2 = getItemOrderEndpoints.call(this.component);
 
-            var list = [
-                this._createMenuItem(utils.gettext("Rename"), "pencil", function () {
+            let list = [
+                this._createMenuItem(utils.gettext("Rename"), "fas fa-pencil-alt", function () {
                     showRenameModal.call(this);
                 }.bind(this), canRename),
                 this._createMenuItem(item1.title, item1.icon, function () {
@@ -76,14 +131,14 @@
                         this.startOrderingEndpoints();
                     }
                 }.bind(this.component), canOrderEndpoints),
-                this._createMenuItem(utils.gettext("Upgrade/Downgrade"), "retweet", function () {
-                    var dialog = new Wirecloud.ui.UpgradeWindowMenu(this._component);
+                this._createMenuItem(utils.gettext("Upgrade/Downgrade"), "fas fa-retweet", function () {
+                    const dialog = new Wirecloud.ui.UpgradeWindowMenu(this._component);
                     dialog.show();
                 }.bind(this.component), canUpgrade),
-                this._createMenuItem(utils.gettext("Logs"), "tags", function () {
+                this._createMenuItem(utils.gettext("Logs"), "fas fa-tags", function () {
                     this.showLogs();
                 }.bind(this.component)),
-                this._createMenuItem(utils.gettext("Settings"), "gear", function () {
+                this._createMenuItem(utils.gettext("Settings"), "fas fa-cog", function () {
                     this.showSettings();
                 }.bind(this.component), canShowSettings)
             ];
@@ -97,67 +152,6 @@
             return list;
         }
 
-    });
-
-    // =========================================================================
-    // PRIVATE MEMBERS
-    // =========================================================================
-
-    var canRename = function canRename() {
-        return this.type == 'widget' && this._component.isAllowed('rename');
-    };
-
-    var canUpgrade = function canUpgrade() {
-        return !this.background && this._component.isAllowed('upgrade') && Wirecloud.LocalCatalogue.hasAlternativeVersion(this._component.meta);
-    };
-
-    var canCollapseEndpoints = function canCollapseEndpoints() {
-        return this.hasEndpoints() && !this.background && !this.orderingEndpoints;
-    };
-
-    var canDeleteCascade = function canDeleteCascade() {
-        return this.isRemovable();
-    };
-
-    var canOrderEndpoints = function canOrderEndpoints() {
-        return this.hasOrderableEndpoints() && !this.background && !this.missing && !this.collapsed;
-    };
-
-    var canShowSettings = function canShowSettings() {
-        return this.hasSettings() && this._component.isAllowed('configure');
-    };
-
-    var getItemCollapse = function getItemCollapse() {
-        if (this.collapsed) {
-            return {title: utils.gettext("Expand"), icon: "caret-square-o-down"};
-        } else {
-            return {title: utils.gettext("Collapse"), icon: "caret-square-o-up"};
-        }
-    };
-
-    var getItemOrderEndpoints = function getItemOrderEndpoints() {
-        if (this.orderingEndpoints) {
-            return {title: utils.gettext("Stop ordering"), icon: "sort"};
-        } else {
-            return {title: utils.gettext("Order endpoints"), icon: "sort"};
-        }
-    };
-
-    var showRenameModal = function showRenameModal() {
-        var dialog = new Wirecloud.ui.FormWindowMenu([
-                {name: 'title', label: utils.gettext("Title"), type: 'text', placeholder: this.component.title},
-            ],
-            utils.interpolate(utils.gettext("Rename %(type)s"), this.component),
-            "wc-component-rename-modal");
-
-        dialog.executeOperation = function (data) {
-            if (data.title) {
-                this.component._component.rename(data.title);
-            }
-        }.bind(this);
-
-        dialog.show();
-        dialog.setValue({title: this.component.title});
-    };
+    }
 
 })(Wirecloud.ui.WiringEditor, StyledElements, StyledElements.Utils);

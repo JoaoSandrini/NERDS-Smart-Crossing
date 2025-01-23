@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2008-2016 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2019-2021 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -22,9 +23,45 @@
 /* globals Wirecloud */
 
 
-(function (utils) {
+(function (ns, utils) {
 
     "use strict";
+
+    const UNIT_RE = /^([-+]?\d+(?:\.\d+)?)\s*(px|%|)$/;
+
+    const on_remove_widget = function on_remove_widget(widget) {
+        this.removeWidget(widget, true);
+        this.dragboard.update();
+    };
+
+    /**
+     * @private
+     *
+     * Checks that the given widget has a minimal size. This check is performed using
+     * widget content size.
+     */
+    const ensureMinimalSize = function ensureMinimalSize(widget, persist) {
+        const minWidth = Math.ceil(this.fromPixelsToHCells(80));
+        const minHeight = Math.ceil(this.fromPixelsToVCells(80));
+
+        let sizeChange = false;
+        let newWidth = widget.shape.width;
+        let newHeight = widget.shape.height;
+
+        if (newWidth < minWidth) {
+            sizeChange = true;
+            newWidth = minWidth;
+        }
+
+        if (newHeight < minHeight) {
+            sizeChange = true;
+            newHeight = minHeight;
+        }
+
+        if (sizeChange) {
+            widget.setShape({width: newWidth, height: newHeight});
+        }
+    };
 
     /**
      * This constructor initializes the common resources of a DragboardLayout. As
@@ -39,409 +76,293 @@
      *
      * @param {Dragboard} dragboard      associated dragboard
      */
-    var DragboardLayout = function DragboardLayout(dragboard) {
-        if (arguments.length === 0) {
-            return; // Allow empty constructor (allowing hierarchy)
+    ns.DragboardLayout = class DragboardLayout {
+
+        constructor(dragboard) {
+            this.dragboard = dragboard;
+            this.widgets = {};
+
+            this._on_remove_widget_bound = on_remove_widget.bind(this);
         }
 
-        this.dragboard = dragboard;
-        this.widgets = {};
-
-        this._on_remove_widget_bound = on_remove_widget.bind(this);
-    };
-
-    /**
-     *
-     */
-    DragboardLayout.prototype._notifyWindowResizeEvent = function _notifyWindowResizeEvent(widthChanged, heightChanged) {
-        // Notify each iwidget
-        var iwidget_key, iWidget;
-        for (iwidget_key in this.widgets) {
-            iWidget = this.widgets[iwidget_key];
-            iWidget.repaint();
-        }
-    };
-
-    /**
-     *
-     */
-    DragboardLayout.prototype._notifyResizeEvent = function (iWidget, oldWidth, oldHeight, newWidth, newHeight, resizeLeftSide, persist) {
-    };
-
-    /**
-     * Returns the size of the menu bar.
-     *
-     * @returns {Wirecloud.ui.MultiValuedSize} the size of the menu bar
-     */
-    DragboardLayout.prototype.getMenubarSize = function getMenubarSize() {
-        var sizeInPixels = 18; // TODO calculate this
-        var sizeInLU = Math.ceil(this.fromPixelsToVCells(sizeInPixels));
-        return new Wirecloud.ui.MultiValuedSize(sizeInPixels, sizeInLU);
-    };
-
-    /**
-     * Returns the size of the status bar.
-     *
-     * @returns {Wirecloud.ui.MultiValuedSize} the size of the menu bar
-     */
-    DragboardLayout.prototype.getStatusbarSize = function getStatusbarSize() {
-        var sizeInPixels = 16; // TODO calculate this
-        var sizeInLU = Math.ceil(this.fromPixelsToVCells(sizeInPixels));
-        return new Wirecloud.ui.MultiValuedSize(sizeInPixels, sizeInLU);
-    };
-
-    /**
-     * Returns the total vertical extra size that will have an iWidget. For now,
-     * thats includes the menu bar and the status bar sizes.
-     *
-     * @returns {Wirecloud.ui.MultiValuedSize} vertical extra size
-     */
-    DragboardLayout.prototype.getExtraSize = function getExtraSize() {
-        var sizeInPixels = this.getMenubarSize().inPixels +
-                           this.getStatusbarSize().inPixels;
-        var sizeInLU = Math.ceil(this.fromPixelsToVCells(sizeInPixels));
-        return new Wirecloud.ui.MultiValuedSize(sizeInPixels, sizeInLU);
-    };
-
-    // =========================================================================
-    // LAYOUT UNITS (LU) CONVERSION.
-    // =========================================================================
-
-    /**
-     * Converters
-     */
-    var UNIT_RE = /^(\d+(?:\.\d+)?)\s*(px|%|)$/;
-    DragboardLayout.prototype.parseSize = function parseSize(value) {
-        var matches;
-
-        if (typeof value === 'number') {
-            return [value, 'cells'];
-        } else if (typeof value === 'string') {
-            value = value.trim();
-            matches = value.match(UNIT_RE);
-            if (matches[2] !== '') {
-                return [Number(matches[1]), matches[2]];
-            } else {
-                return [Number(matches[1]), "cells"];
+        /**
+         *
+         */
+        _notifyWindowResizeEvent(widthChanged, heightChanged) {
+            if (widthChanged || heightChanged) {
+                // Notify each iwidget
+                Object.values(this.widgets).forEach((widget) => {
+                    widget.repaint();
+                });
             }
-        } else {
-            throw new TypeError();
         }
-    };
 
-    DragboardLayout.prototype.adaptColumnOffset = function adaptColumnOffset(pixels) {
-        var msg = "method \"%(method)s\" must be implemented.";
-        msg = utils.interpolate(msg, {method: "adaptColumnOffset"}, true);
-        throw new Error(msg);
-    };
+        /**
+         *
+         */
+        _notifyResizeEvent(iWidget, oldWidth, oldHeight, newWidth, newHeight, resizeLeftSide, resizeTopSide, persist) {
+        }
 
-    DragboardLayout.prototype.adaptRowOffset = function adaptRowOffset(pixels) {
-        var msg = "method \"%(method)s\" must be implemented.";
-        msg = utils.interpolate(msg, {method: "adaptRowOffset"}, true);
-        throw new Error(msg);
-    };
+        // =========================================================================
+        // LAYOUT UNITS (LU) CONVERSION.
+        // =========================================================================
 
-    DragboardLayout.prototype.adaptHeight = function adaptHeight(size) {
-        var parsedSize, pixels, sizeInLU;
-
-        parsedSize = this.parseSize(size);
-        if (parsedSize[1] === 'cells') {
-            sizeInLU = Math.round(parsedSize[0]);
-        } else {
-            if (parsedSize[1] === '%') {
-                pixels = Math.round((parsedSize[0] * this.getHeight()) / 100);
+        /**
+         * Converters
+         */
+        parseSize(value) {
+            if (typeof value === 'number') {
+                return [value, 'cells'];
+            } else if (typeof value === 'string') {
+                value = value.trim();
+                const matches = value.match(UNIT_RE);
+                if (matches[2] !== '') {
+                    return [Number(matches[1]), matches[2]];
+                } else {
+                    return [Number(matches[1]), "cells"];
+                }
             } else {
-                pixels = this.padHeight(parsedSize[0]);
+                throw new TypeError();
             }
-            sizeInLU = Math.round(this.fromPixelsToVCells(pixels));
         }
-        return new Wirecloud.ui.MultiValuedSize(this.getHeightInPixels(sizeInLU), sizeInLU);
-    };
 
-    DragboardLayout.prototype.adaptWidth = function adaptWidth(size) {
-        var parsedSize, pixels, sizeInLU;
-
-        parsedSize = this.parseSize(size);
-        if (parsedSize[1] === 'cells') {
-            sizeInLU = Math.round(parsedSize[0]);
-        } else {
-            if (parsedSize[1] === '%') {
-                pixels = Math.round((parsedSize[0] * this.getWidth()) / 100);
-            } else {
-                pixels = this.padWidth(parsedSize[0]);
-            }
-            sizeInLU = Math.round(this.fromPixelsToHCells(pixels));
-        }
-        return new Wirecloud.ui.MultiValuedSize(this.getWidthInPixels(sizeInLU), sizeInLU);
-    };
-
-    DragboardLayout.prototype.updatePosition = function updatePosition(widget, element) {
-        element.style.left = this.getColumnOffset(widget.position.x) + "px";
-        element.style.top = this.getRowOffset(widget.position.y) + "px";
-    };
-
-    DragboardLayout.prototype.padWidth = function padWidth(width) {
-        return width;
-    };
-
-    DragboardLayout.prototype.padHeight = function padHeight(height) {
-        return height;
-    };
-
-    /**
-     * Checks if the point is inside the dragboard.
-     *
-     * @param x  X coordinate
-     * @param y  Y coordinate
-     *
-     * @returns true if the point is inside
-     */
-    DragboardLayout.prototype.isInside = function isInside(x, y) {
-        return (x >= 0) && (x < this.getWidth()) && (y >= 0);
-    };
-
-    /**
-     * Gets the width of the usable dragboard area.
-     *
-     * @returns The width of the usable dragboard area
-     */
-    DragboardLayout.prototype.getWidth = function getWidth() {
-        return this.dragboard.getWidth();
-    };
-
-    /**
-     * Gets the height of the usable dragboard area.
-     *
-     * @returns The height of the usable dragboard area
-     */
-    DragboardLayout.prototype.getHeight = function getHeight() {
-        return this.dragboard.getHeight();
-    };
-
-    Object.defineProperty(DragboardLayout.prototype, "dragboardTopMargin", {
-        get: function () {
-            return this.dragboard.topMargin;
-        }
-    });
-
-    Object.defineProperty(DragboardLayout.prototype, "dragboardLeftMargin", {
-        configurable: true,
-        get: function () {
-            return this.dragboard.leftMargin;
-        }
-    });
-
-    DragboardLayout.prototype.addWidget = function addWidget(widget, affectsDragboard) {
-        if (widget.layout != null) {
-            var msg = utils.gettext("the widget could not be associated with this layout as it already has an associated layout.");
+        adaptColumnOffset(pixels) {
+            const msg = utils.interpolate(
+                "method \"%(method)s\" must be implemented.",
+                {method: "adaptColumnOffset"},
+                true
+            );
             throw new Error(msg);
         }
-        widget.layout = this;
 
-        if (affectsDragboard) {
-            this.dragboard._addWidget(widget);
+        adaptRowOffset(pixels) {
+            const msg = utils.interpolate(
+                "method \"%(method)s\" must be implemented.",
+                {method: "adaptRowOffset"},
+                true
+            );
+            throw new Error(msg);
         }
 
-        this.widgets[widget.id] = widget;
-        widget.addEventListener('remove', this._on_remove_widget_bound);
-        widget.repaint();
-    };
+        adaptHeight(size) {
+            let pixels, sizeInLU;
 
-    /**
-     * @private
-     *
-     * This function should be called at the end of the implementation of addWidget.
-     */
-    DragboardLayout.prototype._adaptIWidget = function _adaptIWidget(iWidget) {
-        if (iWidget.element !== null) {
-            this._ensureMinimalSize(iWidget, false);
-        }
-    };
-
-    /**
-     * @private
-     *
-     * Checks that the given iWidget has a minimal size. This check is performed using
-     * iWidget content size.
-     */
-    DragboardLayout.prototype._ensureMinimalSize = function _ensureMinimalSize(iWidget, persist) {
-        var minWidth = Math.ceil(this.fromPixelsToHCells(80));
-        var minHeight = Math.ceil(this.fromPixelsToVCells(80));
-
-        var sizeChange = false;
-        var newWidth = iWidget.shape.width;
-        var newHeight = iWidget.shape.height;
-
-        if (newWidth < minWidth) {
-            sizeChange = true;
-            newWidth = minWidth;
+            const parsedSize = this.parseSize(size);
+            if (parsedSize[1] === 'cells') {
+                sizeInLU = Math.round(parsedSize[0]);
+            } else {
+                if (parsedSize[1] === '%') {
+                    pixels = Math.round((parsedSize[0] * this.getHeight()) / 100);
+                } else {
+                    pixels = this.padHeight(parsedSize[0]);
+                }
+                sizeInLU = Math.round(this.fromPixelsToVCells(pixels));
+            }
+            sizeInLU = Math.max(1, sizeInLU);
+            return new Wirecloud.ui.MultiValuedSize(this.getHeightInPixels(sizeInLU), sizeInLU);
         }
 
-        if (newHeight < minHeight) {
-            sizeChange = true;
-            newHeight = minHeight;
+        adaptWidth(size) {
+            let pixels, sizeInLU;
+
+            const parsedSize = this.parseSize(size);
+            if (parsedSize[1] === 'cells') {
+                sizeInLU = Math.round(parsedSize[0]);
+            } else {
+                if (parsedSize[1] === '%') {
+                    pixels = Math.round((parsedSize[0] * this.getWidth()) / 100);
+                } else {
+                    pixels = this.padWidth(parsedSize[0]);
+                }
+                sizeInLU = Math.round(this.fromPixelsToHCells(pixels));
+            }
+            sizeInLU = Math.max(1, sizeInLU);
+            return new Wirecloud.ui.MultiValuedSize(this.getWidthInPixels(sizeInLU), sizeInLU);
         }
 
-        if (sizeChange) {
-            iWidget.setShape({width: newWidth, height: newHeight});
-        }
-    };
-
-    /**
-     * Removes the indicated widget from this layout
-     *
-     * @returns true if any of the other widgets of this layout has been moved
-     */
-    DragboardLayout.prototype.removeWidget = function removeWidget(widget, affectsDragboard) {
-        delete this.widgets[widget.id];
-
-        if (affectsDragboard) {
-            this.dragboard._removeWidget(widget);
+        updatePosition(widget, element) {
+            element.style.left = this.getColumnOffset(widget.position) + "px";
+            element.style.top = this.getRowOffset(widget.position) + "px";
+            element.style.bottom = "";
+            element.style.right = "";
         }
 
-        widget.layout = null;
-        widget.removeEventListener('remove', this._on_remove_widget_bound);
+        updateShape(widget, element) {
+            const width = this.getWidthInPixels(widget.shape.width);
+            if (width != null) {
+                element.style.width = width + 'px';
+            } else {
+                element.style.width = "";
+            }
 
-        return false;
-    };
-
-    /**
-     * Moves this layout to another layout.
-     *
-     * @param {DragboardLayout} destLayout Layout where the iWidgets are going to be
-     *        moved.
-     */
-    DragboardLayout.prototype.moveTo = function moveTo(destLayout) {
-        var iwidget_key, iWidget;
-
-        for (iwidget_key in this.widgets) {
-            iWidget = this.widgets[iwidget_key];
-            iWidget.moveToLayout(destLayout);
+            const height = widget.minimized ? null : this.getHeightInPixels(widget.shape.height);
+            if (height != null) {
+                element.style.height = height + 'px';
+            } else {
+                element.style.height = "";
+            }
         }
-    };
 
-    // =========================================================================
-    // Drag & drop support
-    // =========================================================================
+        padWidth(width) {
+            return width;
+        }
 
-    /**
-     * Initializes a temporal iWidget move.
-     *
-     * @param {IWidget}          iWidget     iWidget to move
-     * @param {IWidgetDraggable} [draggable] associated draggable object (only
-     *                                       needed in drag & drop operations)
-     *
-     * @see DragboardLayout.initializeMove
-     * @see DragboardLayout.moveTemporally
-     * @see DragboardLayout.acceptMove
-     * @see DragboardLayout.cancelMove
-     *
-     * @example
-     * layout.initializeMove(iWidget, iWidgetDraggable);
-     * layout.moveTemporally(1,0);
-     * layout.moveTemporally(10,8);
-     * layout.acceptMove();
-     */
-    DragboardLayout.prototype.initializeMove = function initializeMove(iWidget, draggable) {
-    };
+        padHeight(height) {
+            return height;
+        }
 
-    /**
-     * Moves temporally the configured iWidget (or cursor) to the given position.
-     *
-     * @param {Number} x new X coordinate
-     * @param {Number} y new Y coordinate
-     *
-     * @see DragboardLayout.initializeMove
-     */
-    DragboardLayout.prototype.moveTemporally = function moveTemporally(x, y) {
-    };
+        /**
+         * Checks if the point is inside the dragboard.
+         *
+         * @param x  X coordinate
+         * @param y  Y coordinate
+         *
+         * @returns true if the point is inside
+         */
+        isInside(x, y) {
+            return (x >= 0) && (x < this.getWidth()) && (y >= 0);
+        }
 
-    /**
-     * Finish the current temporal move accepting the current position.
-     *
-     * @see DragboardLayout.initializeMove
-     */
-    DragboardLayout.prototype.acceptMove = function acceptMove() {
-    };
+        /**
+         * Gets the width of the usable dragboard area.
+         *
+         * @returns The width of the usable dragboard area
+         */
+        getWidth() {
+            return this.dragboard.getWidth();
+        }
 
-    /**
-     * Finish the current temporal move restoring the layout to the status before
-     * to the call to initializeMove.
-     *
-     * @see DragboardLayout.initializeMove
-     */
-    DragboardLayout.prototype.cancelMove = function cancelMove() {
-    };
+        /**
+         * Gets the height of the usable dragboard area.
+         *
+         * @returns The height of the usable dragboard area
+         */
+        getHeight() {
+            return this.dragboard.getHeight();
+        }
 
-    /**
-     * Disables the cursor if it is active. This method must be implemented by
-     * real Layout classes whether they use cursors. The default implementation
-     * does nothing.
-     */
-    DragboardLayout.prototype.disableCursor = function disableCursor() {
-    };
+        addWidget(widget, affectsDragboard) {
+            if (widget.layout != null) {
+                const msg = utils.gettext("the widget could not be associated with this layout as it already has an associated layout.");
+                throw new Error(msg);
+            }
+            widget.layout = this;
 
-    // =========================================================================
-    // CSS UNIT CONVERSIONS
-    // =========================================================================
+            if (affectsDragboard) {
+                this.dragboard._addWidget(widget);
+            }
 
-    /**
-     * Measure the given test elmenet in the specified css units.
-     *
-     * @param testElement element to measure
-     * @param units units to use in the measure
-     *
-     * @returns the horizontal and vertical size of the test element converted
-     *          to the target css units.
-     *
-     * @see CSSPrimitiveValue
-     */
-    DragboardLayout.prototype.measure = function measure(testElement, units) {
-        var res, cssStyle;
+            this.widgets[widget.id] = widget;
+            widget.addEventListener('remove', this._on_remove_widget_bound);
+            widget.repaint();
 
-        testElement.style.visibility = "hidden";
-        this.dragboard.tab.appendChild(testElement);
+            return new Set();
+        }
 
-        // Retrieve target measurements
-        res = [];
-        cssStyle = document.defaultView.getComputedStyle(testElement, null);
-        res[0] = cssStyle.getPropertyCSSValue("width").getFloatValue(units);
-        res[1] = cssStyle.getPropertyCSSValue("height").getFloatValue(units);
+        /**
+         * @private
+         *
+         * This function should be called at the end of the implementation of addWidget.
+         */
+        _adaptIWidget(widget) {
+            if (widget.element != null) {
+                ensureMinimalSize.call(this, widget, false);
+            }
+        }
 
-        // Remove the test element
-        testElement.remove();
+        /**
+         * Removes the indicated widget from this layout
+         *
+         * @returns true if any of the other widgets of this layout has been moved
+         */
+        removeWidget(widget, affectsDragboard) {
+            delete this.widgets[widget.id];
 
-        return res;
-    };
+            if (affectsDragboard) {
+                this.dragboard._removeWidget(widget);
+            }
 
-    /**
-     * Converts a value from its initial units to the especified css units.
-     *
-     * @param {String} value css value to convert
-     * @param newUnits units to convert to
-     *
-     * @returns the value converted to the target css units in horizontal and
-     *          vertical
-     *
-     * @see CSSPrimitiveValue
-     *
-     * @example
-     * layout.unitConvert("1cm", CSSPrimitiveValue.CSS_PX);
-     */
-    DragboardLayout.prototype.unitConvert = function unitConvert(value, newUnits) {
-        // Create a square div using the given value
-        var testDiv = document.createElement("div");
-        testDiv.style.height = value;
-        testDiv.style.width = value;
+            widget.layout = null;
+            widget.removeEventListener('remove', this._on_remove_widget_bound);
 
-        return this.measure(testDiv, newUnits);
-    };
+            return new Set();
+        }
 
-    var on_remove_widget = function on_remove_widget(widget) {
-        this.removeWidget(widget, true);
-        this.dragboard.update();
-    };
+        /**
+         * Moves all widget in this layout to another layout.
+         *
+         * @param {DragboardLayout} destLayout Layout where the iWidgets are going to be
+         *        moved.
+         */
+        moveTo(destLayout) {
+            Object.values(this.widgets).forEach((widget) => {
+                widget.moveToLayout(destLayout);
+            });
 
-    Wirecloud.ui.DragboardLayout = DragboardLayout;
+            return this;
+        }
 
-})(Wirecloud.Utils);
+        // =========================================================================
+        // Drag & drop support
+        // =========================================================================
+
+        /**
+         * Initializes a temporal iWidget move.
+         *
+         * @param {IWidget}          iWidget     iWidget to move
+         * @param {IWidgetDraggable} [draggable] associated draggable object (only
+         *                                       needed in drag & drop operations)
+         *
+         * @see DragboardLayout.initializeMove
+         * @see DragboardLayout.moveTemporally
+         * @see DragboardLayout.acceptMove
+         * @see DragboardLayout.cancelMove
+         *
+         * @example
+         * layout.initializeMove(iWidget, iWidgetDraggable);
+         * layout.moveTemporally(1,0);
+         * layout.moveTemporally(10,8);
+         * layout.acceptMove();
+         */
+        initializeMove(iWidget, draggable) {
+        }
+
+        /**
+         * Moves temporally the configured iWidget (or cursor) to the given position.
+         *
+         * @param {Number} x new X coordinate
+         * @param {Number} y new Y coordinate
+         *
+         * @see DragboardLayout.initializeMove
+         */
+        moveTemporally(x, y) {
+        }
+
+        /**
+         * Finish the current temporal move accepting the current position.
+         *
+         * @see DragboardLayout.initializeMove
+         */
+        acceptMove() {
+        }
+
+        /**
+         * Finish the current temporal move restoring the layout to the status before
+         * to the call to initializeMove.
+         *
+         * @see DragboardLayout.initializeMove
+         */
+        cancelMove() {
+        }
+
+        /**
+         * Disables the cursor if it is active. This method must be implemented by
+         * real Layout classes whether they use cursors. The default implementation
+         * does nothing.
+         */
+        disableCursor() {
+        }
+
+    }
+
+})(Wirecloud.ui, Wirecloud.Utils);

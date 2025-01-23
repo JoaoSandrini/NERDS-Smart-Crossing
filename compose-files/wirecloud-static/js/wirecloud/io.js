@@ -1,5 +1,6 @@
 /*
  *     Copyright 2012-2017 (c) CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2020-2021 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -26,12 +27,10 @@
 
     "use strict";
 
-    var HANDLER_RE = new RegExp(/^on(?:Complete|Exception|Failure|Success|UploadProgress|\d{3})$/);
+    const HANDLER_RE = new RegExp(/^on(?:Complete|Exception|Failure|Success|UploadProgress|\d{3})$/);
 
-    var setRequestHeaders = function setRequestHeaders() {
-        var headers, name;
-
-        headers = utils.merge({
+    const setRequestHeaders = function setRequestHeaders() {
+        const headers = utils.merge({
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'text/javascript, text/html, application/xml, text/xml, */*'
         }, this.options.requestHeaders);
@@ -43,18 +42,18 @@
             }
         }
 
-        for (name in headers) {
+        for (const name in headers) {
             if (headers[name] != null) {
                 this.transport.setRequestHeader(name, headers[name]);
             }
         }
     };
 
-    var onAbort = function onAbort(event) {
+    const onAbort = function onAbort(event) {
         event.stopPropagation();
         event.preventDefault();
 
-        var response = new Response(this);
+        const response = new Response(this);
         Wirecloud.Task.prototype.abort.call(this, response);
 
         utils.callCallback(this.options.onAbort);
@@ -67,8 +66,8 @@
         }
     };
 
-    var onReadyStateChange = function onReadyStateChange(handler, error) {
-        var response = new Response(this);
+    const onReadyStateChange = function onReadyStateChange(handler, error) {
+        const response = new Response(this);
         if (error) {
             handler(new io.ConnectionError(this));
         } else {
@@ -98,35 +97,39 @@
         return response;
     };
 
-    var Response = function Response(request) {
-        Object.defineProperties(this, {
-            'request': {value: request},
-            'transport': {value: request.transport},
-            'status': {value: request.transport.status},
-            'statusText': {value: request.transport.statusText},
-            'response': {value: request.transport.response}
-        });
+    const Response = class Response {
 
-        if (request.options.responseType == null || request.options.responseType === '') {
+        constructor(request) {
             Object.defineProperties(this, {
-                'responseText': {value: request.transport.responseText},
-                'responseXML': {value: request.transport.responseXML}
+                'request': {value: request},
+                'transport': {value: request.transport},
+                'status': {value: request.transport.status},
+                'statusText': {value: request.transport.statusText},
+                'response': {value: request.transport.response}
             });
+
+            if (request.options.responseType == null || request.options.responseType === '') {
+                Object.defineProperties(this, {
+                    'responseText': {value: request.transport.responseText},
+                    'responseXML': {value: request.transport.responseXML}
+                });
+            }
         }
-    };
 
-    Response.prototype.getHeader = function getHeader(name) {
-        try {
-            return this.transport.getResponseHeader(name);
-        } catch (e) { return null; }
-    };
+        getHeader(name) {
+            try {
+                return this.transport.getResponseHeader(name);
+            } catch (e) { return null; }
+        }
 
-    Response.prototype.getAllResponseHeaders = function getAllResponseHeaders() {
-        return this.transport.getAllResponseHeaders();
-    };
+        getAllResponseHeaders() {
+            return this.transport.getAllResponseHeaders();
+        }
 
-    var toQueryString = function toQueryString(parameters) {
-        var key, query = [];
+    }
+
+    const toQueryString = function toQueryString(parameters) {
+        const query = [];
 
         if (parameters == null) {
             return null;
@@ -138,7 +141,7 @@
                 return null;
             }
         } else /* if (typeof parameters === 'object') */ {
-            for (key in parameters) {
+            for (const key in parameters) {
                 if (typeof parameters[key] === 'undefined') {
                     continue;
                 } else if (parameters[key] === null) {
@@ -156,102 +159,111 @@
         }
     };
 
-    var Request = function Request(url, options) {
-        var key;
+    const Request = class Request extends Wirecloud.Task {
 
-        this.options = utils.merge({
-            method: 'POST',
-            asynchronous: true,
-            responseType: null,
-            contentType: null,
-            encoding: null,
-            postBody: null
-        }, options);
+        constructor(url, options) {
+            options = utils.merge({
+                method: 'POST',
+                asynchronous: true,
+                responseType: null,
+                contentType: null,
+                encoding: null,
+                postBody: null
+            }, options);
 
-        for (key in this.options) {
-            if (HANDLER_RE.test(key) && this.options[key] != null && typeof this.options[key] !== 'function') {
-                throw new TypeError(utils.interpolate('Invalid %(callback)s callback', {callback: key}, true));
-            }
-        }
-
-        if (this.options.context != null) {
-            for (key in this.options) {
-                if (HANDLER_RE.test(key) && typeof this.options[key] === 'function') {
-                    this.options[key] = this.options[key].bind(this.options.context);
+            for (const key in options) {
+                if (HANDLER_RE.test(key) && options[key] != null && typeof options[key] !== 'function') {
+                    throw new TypeError(utils.interpolate('Invalid %(callback)s callback', {callback: key}, true));
                 }
             }
-        }
 
-        Object.defineProperties(this, {
-            method: {
-                value: this.options.method.toUpperCase()
-            }
-        });
-
-        if (['PUT', 'POST'].indexOf(this.method) !== -1 && this.options.postBody == null) {
-            var parameters = toQueryString(this.options.parameters);
-            if (parameters != null) {
-                this.options.postBody = parameters;
-                if (this.options.contentType == null) {
-                    this.options.contentType = 'application/x-www-form-urlencoded';
-                }
-                if (this.options.encoding == null) {
-                    this.options.encoding = 'UTF-8';
+            if (options.context != null) {
+                for (const key in options) {
+                    if (HANDLER_RE.test(key) && typeof options[key] === 'function') {
+                        options[key] = options[key].bind(options.context);
+                    }
                 }
             }
-        }
 
-        Object.defineProperties(this, {
-            url: {
-                value: url
-            },
-            abort: {
-                value: function () {
-                    this.transport.aborted = true;
-                    this.transport.abort();
-                    return this;
+            const method = options.method.toUpperCase();
+
+            if (['PUT', 'POST'].indexOf(method) !== -1 && options.postBody == null) {
+                const parameters = toQueryString(options.parameters);
+                if (parameters != null) {
+                    options.postBody = parameters;
+                    if (options.contentType == null) {
+                        options.contentType = 'application/x-www-form-urlencoded';
+                    }
+                    if (options.encoding == null) {
+                        options.encoding = 'UTF-8';
+                    }
                 }
             }
-        });
 
-        this.transport = new XMLHttpRequest();
-        if (this.options.withCredentials === true && this.options.supportsAccessControl) {
-            this.transport.withCredentials = true;
-        }
-        if (this.options.responseType) {
-            this.transport.responseType = this.options.responseType;
-        }
-        this.transport.addEventListener('abort', onAbort.bind(this), true);
-        if (typeof this.options.onUploadProgress === 'function') {
-            this.transport.upload.addEventListener('progress', options.onUploadProgress, false);
-        }
+            const transport = new XMLHttpRequest();
+            if (options.withCredentials === true && options.supportsAccessControl) {
+                transport.withCredentials = true;
+            }
+            if (options.responseType) {
+                transport.responseType = options.responseType;
+            }
 
-        Wirecloud.Task.call(this, "making request", function (resolve, reject, update) {
-            this.transport.upload.addEventListener('progress', function (event) {
-                var progress = Math.round(event.loaded * 100 / event.total);
-                update(progress / 2);
+            super("making request", (resolve, reject, update) => {
+                transport.upload.addEventListener('progress', (event) => {
+                    const progress = Math.round(event.loaded * 100 / event.total);
+                    update(progress / 2);
+                });
+                transport.addEventListener("progress", (event) => {
+                    if (event.lengthComputable) {
+                        const progress = Math.round(event.loaded * 100 / event.total);
+                        update(50 + (progress / 2));
+                    }
+                });
+                transport.addEventListener("load", () => {
+                    onReadyStateChange.call(this, resolve);
+                });
+                transport.addEventListener("error", () => {
+                    onReadyStateChange.call(this, reject, true);
+                });
             });
-            this.transport.addEventListener("progress", function (event) {
-                if (event.lengthComputable) {
-                    var progress = Math.round(event.loaded * 100 / event.total);
-                    update(50 + (progress / 2));
+
+            Object.defineProperties(this, {
+                options: {
+                    value: options
+                },
+                method: {
+                    value: method
+                },
+                transport: {
+                    value: transport
+                },
+                url: {
+                    value: url
                 }
-            }.bind(this));
-            this.transport.addEventListener("load", function () {
-                onReadyStateChange.call(this, resolve);
-            }.bind(this));
-            this.transport.addEventListener("error", function () {
-                onReadyStateChange.call(this, reject, true);
-            }.bind(this));
-        }.bind(this));
+            });
 
-        this.transport.open(this.method, this.url, this.options.asynchronous);
-        setRequestHeaders.call(this);
-        this.transport.send(this.options.postBody);
-    };
-    utils.inherit(Request, Wirecloud.Task);
+            transport.addEventListener('abort', onAbort.bind(this), true);
+            if (typeof this.options.onUploadProgress === 'function') {
+                this.transport.upload.addEventListener('progress', options.onUploadProgress, false);
+            }
+            if (typeof this.options.onProgress === 'function') {
+                this.transport.addEventListener('progress', options.onProgress, false);
+            }
 
-    var io = {};
+            this.transport.open(this.method, this.url, this.options.asynchronous);
+            setRequestHeaders.call(this);
+            this.transport.send(this.options.postBody);
+        }
+
+        abort() {
+            this.transport.aborted = true;
+            this.transport.abort();
+            return this;
+        }
+
+    }
+
+    const io = {};
 
     /**
      * Error raised if there are problems connecting to the server. Browsers
@@ -263,21 +275,30 @@
      * @name Wirecloud.io.ConnectionError
      * @summary Exception raised for connection problems.
      */
-    io.ConnectionError = function ConnectionError() {
-        this.name = 'ConnectionError';
-        this.message = 'Connection Error';
-    };
+    io.ConnectionError = class ConnectionError extends Error {
 
-    io.ConnectionError.prototype = new Error();
-    io.ConnectionError.prototype.constructor = io.ConnectionError;
+        constructor() {
+            const message = "Connection Error";
 
-    io.ConnectionError.prototype.toString = function toString() {
-        return this.message;
-    };
+            super(message);
+
+            this.name = "ConnectionError";
+            this.message = message;
+
+            // Maintains proper stack trace for where our error was thrown (only available on V8)
+            if (Error.captureStackTrace) {
+                Error.captureStackTrace(this, this.constructor);
+            }
+        }
+
+        toString() {
+            return this.message;
+        }
+
+    }
+
 
     io.buildProxyURL = function buildProxyURL(url, options) {
-        var forceProxy, hash;
-
         options = utils.merge({
             method: 'POST',
             asynchronous: true,
@@ -291,12 +312,12 @@
             url = new URL(url, Wirecloud.location.base);
         }
 
-        forceProxy = !!options.forceProxy;
+        const forceProxy = !!options.forceProxy;
         if (["blob:", "data:"].indexOf(url.protocol) !== -1) {
             return url.toString();
         }
 
-        hash = url.hash;
+        const hash = url.hash;
         url.hash = '';
         if (forceProxy || (options.supportsAccessControl !== true && url.origin !== Wirecloud.location.domain)) {
             url = new URL(
@@ -309,7 +330,7 @@
 
         // Add parameters
         if (['PUT', 'POST'].indexOf(options.method) === -1 || options.postBody != null) {
-            var parameters = toQueryString(options.parameters);
+            const parameters = toQueryString(options.parameters);
             if (parameters != null) {
                 if (url.indexOf('?') !== -1) {
                     url += '&' + parameters;

@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2008-2016 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2020 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -22,109 +23,123 @@
 /* globals StyledElements, Wirecloud */
 
 
-(function () {
+(function (ns, se, utils) {
 
     "use strict";
 
-    var WidgetViewResizeHandle = function WidgetViewResizeHandle(widget, options) {
-        if (options == null) {
-            options = {};
+    const MIN_WIDTH = 80;
+    const MIN_HEIGTH = 50;
+
+    ns.WidgetViewResizeHandle = class WidgetViewResizeHandle extends se.StyledElement {
+
+        constructor(widget, options) {
+            if (options == null) {
+                options = {};
+            }
+            options.resizeLeftSide = !!options.resizeLeftSide;
+            options.resizeTopSide = !!options.resizeTopSide;
+            options.fixHeight = !!options.fixHeight;
+            options.fixWidth = !!options.fixWidth;
+            options.widget = widget;
+
+            if (options.fixWidth && options.fixHeight) {
+                throw new TypeError('fixWidth and fixHeight cannot be true at the same time');
+            }
+
+            super([]);
+
+            this.wrapperElement = document.createElement('div');
+
+            Wirecloud.ui.ResizeHandle.call(
+                this, widget.wrapperElement, this.wrapperElement,
+                options,
+                WidgetViewResizeHandle.prototype.onresizestart,
+                WidgetViewResizeHandle.prototype.onresize,
+                WidgetViewResizeHandle.prototype.onresizeend,
+                WidgetViewResizeHandle.prototype.canDrag
+            );
         }
-        options.resizeLeftSide = !!options.resizeLeftSide;
-        options.resizeTopSide = !!options.resizeTopSide;
-        options.fixHeight = !!options.fixHeight;
-        options.fixWidth = !!options.fixWidth;
-        options.widget = widget;
 
-        if (options.fixWidth && options.fixHeight) {
-            throw new Error('fixWidth and fixHeight cannot be true at the same time');
+        canDrag(resizableElement, data, role) {
+            const editing = data.widget.tab.workspace.editing;
+            if (role == null) {
+                role = editing ? "editor" : "viewer";
+            }
+            return (
+                data.widget.model.volatile
+                || data.widget.layout instanceof Wirecloud.ui.FreeLayout
+                || editing
+            )
+            && data.widget.model.isAllowed('resize', role)
+            && !(data.widget.layout instanceof Wirecloud.ui.FullDragboardLayout);
         }
 
-        StyledElements.StyledElement.call(this, []);
+        onresizestart(resizableElement, handleElement, data) {
+            handleElement.classList.add("inUse");
+            data.widget.wrapperElement.classList.add('dragging');
 
-        this.wrapperElement = document.createElement('div');
+            data.initialWidth = data.widget.shape.width;
+            data.initialWidthPixels = data.widget.wrapperElement.clientWidth;
+            data.initialHeight = data.widget.shape.height;
+            data.initialHeightPixels = data.widget.wrapperElement.clientHeight;
+            data.oldZIndex = data.widget.position.z;
+            data.widget.setPosition({z: "999999"});
+            data.dragboard = data.widget.layout.dragboard;
+        }
 
-        Wirecloud.ui.ResizeHandle.call(this, widget.wrapperElement, this.wrapperElement,
-                                options,
-                                WidgetViewResizeHandle.prototype.ondragstart,
-                                WidgetViewResizeHandle.prototype.ondrag,
-                                WidgetViewResizeHandle.prototype.ondragend,
-                                WidgetViewResizeHandle.prototype.canDrag);
-    };
-    WidgetViewResizeHandle.prototype = new StyledElements.StyledElement();
-
-    WidgetViewResizeHandle.prototype.canDrag = function canDrag(resizableElement, data) {
-        return data.widget.model.isAllowed('resize');
-    };
-
-    WidgetViewResizeHandle.prototype.ondragstart = function ondragstart(resizableElement, handleElement, data) {
-        handleElement.classList.add("inUse");
-        data.widget.wrapperElement.classList.add('dragging');
-
-        // TODO merge with iwidget minimum sizes
-        data.minWidth = Math.ceil(data.widget.layout.fromPixelsToHCells(80));
-        data.minHeight = Math.ceil(data.widget.layout.fromPixelsToVCells(50));
-        data.innitialWidth = data.widget.shape.width;
-        data.innitialHeight = data.widget.shape.height;
-        data.oldZIndex = data.widget.position.z;
-        data.widget.setPosition({z: "999999"});
-        data.dragboard = data.widget.layout.dragboard;
-    };
-
-    WidgetViewResizeHandle.prototype.ondrag = function ondrag(resizableElement, handleElement, data, x, y) {
-        var widget = data.widget;
-
-        // Skip if the mouse is outside the dragboard
-        if (widget.layout.isInside(x, y)) {
-            var position = widget.layout.getCellAt(x, y);
-            var currentPosition = widget.position;
-            var width, height;
+        onresize(resizableElement, handleElement, data, xDelta, yDelta) {
+            const widget = data.widget;
+            if (widget.position.anchor.endsWith("center")) {
+                xDelta *= 2;
+            }
 
             if (!data.fixWidth) {
-                if (data.resizeLeftSide) {
-                    width = currentPosition.x + widget.shape.width - position.x;
-                } else {
-                    width = position.x - currentPosition.x + 1;
+                let width = data.resizeLeftSide ? data.initialWidthPixels - xDelta : data.initialWidthPixels + xDelta;
+
+                // Minimum width
+                if (width < MIN_WIDTH) {
+                    width = MIN_WIDTH;
                 }
+
+                const newwidth = widget.layout.adaptWidth(width + 'px');
+                data.width = widget.shape.relwidth ? newwidth.inLU : newwidth.inPixels;
             } else {
-                width = widget.shape.width;
+                data.width = widget.shape.width;
             }
 
             if (!data.fixHeight) {
-                height = position.y - currentPosition.y + 1;
+                let height = data.resizeTopSide ? data.initialHeightPixels - yDelta : data.initialHeightPixels + yDelta;
+
+                // Minimum height
+                if (height < MIN_HEIGTH) {
+                    height = MIN_HEIGTH;
+                }
+
+                const newheight = widget.layout.adaptHeight(height + 'px');
+                data.height = widget.shape.relheight ? newheight.inLU : newheight.inPixels;
             } else {
-                height = widget.shape.height;
+                data.height = widget.shape.height;
             }
 
-            // Minimum width
-            if (width < data.minWidth) {
-                width = data.minWidth;
-            }
-
-            // Minimum height
-            if (height < data.minHeight) {
-                height = data.minHeight;
-            }
-
-            if (width !== widget.shape.width || height !== widget.shape.height) {
-                widget.setShape({width: width, height: height}, data.resizeLeftSide);
+            if (data.width !== widget.shape.width || data.height !== widget.shape.height) {
+                widget.setShape({width: data.width, height: data.height}, data.resizeLeftSide, data.resizeTopSide);
             }
         }
-    };
 
-    WidgetViewResizeHandle.prototype.ondragend = function ondragend(resizableElement, handleElement, data) {
-        var widget = data.widget;
-        data.widget.wrapperElement.classList.remove('dragging');
-        data.widget.setPosition({z: data.oldZIndex});
-        if (data.innitialWidth !== data.widget.shape.width || data.innitialHeight !== data.widget.shape.height) {
-            widget.setShape({width: widget.shape.width, height: widget.shape.height}, data.resizeLeftSide, true);
+        onresizeend(resizableElement, handleElement, data) {
+            const widget = data.widget;
+            data.widget.wrapperElement.classList.remove('dragging');
+            data.widget.setPosition({z: data.oldZIndex});
+
+            if (data.initialWidth !== data.width || data.initialHeight !== data.height) {
+                widget.setShape({width: data.width, height: data.height}, data.resizeLeftSide, data.resizeTopSide, true);
+            }
+            handleElement.classList.remove("inUse");
+
+            // This is needed to check if the scrollbar status has changed (visible/hidden)
+            data.dragboard._notifyWindowResizeEvent();
         }
-        handleElement.classList.remove("inUse");
 
-        // This is needed to check if the scrollbar status has changed (visible/hidden)
-        data.dragboard._notifyWindowResizeEvent();
-    };
+    }
 
-    Wirecloud.ui.WidgetViewResizeHandle = WidgetViewResizeHandle;
-
-})();
+})(Wirecloud.ui, StyledElements, Wirecloud.Utils);

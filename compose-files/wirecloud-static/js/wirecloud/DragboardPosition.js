@@ -26,13 +26,13 @@
 
     "use strict";
 
-    var DragboardPosition = function DragboardPosition(x, y) {
+    const DragboardPosition = function DragboardPosition(x, y) {
         Object.defineProperties(this, {
             x: {
                 enumerable: true,
                 get: function () { return x; },
                 set: function (newValue) {
-                    if (typeof newValue != 'number') {
+                    if (typeof newValue !== 'number') {
                         throw new TypeError('value must be a number');
                     }
                     x = newValue;
@@ -42,7 +42,7 @@
                 enumerable: true,
                 get: function () { return y; },
                 set: function (newValue) {
-                    if (typeof newValue != 'number') {
+                    if (typeof newValue !== 'number') {
                         throw new TypeError('value must be a number');
                     }
                     y = newValue;

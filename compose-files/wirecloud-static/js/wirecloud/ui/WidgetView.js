@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2013-2016 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2019-2021 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -26,378 +27,480 @@
 
     "use strict";
 
-    // =========================================================================
-    // CLASS DEFINITION
-    // =========================================================================
+    const privates = new WeakMap();
 
-    /**
-     * @name Wirecloud.UI.WidgetView
-     *
-     * @extends {StyledElements.StyledElement}
-     * @constructor
-     *
-     * @param {Wirecloud.UI.WorkspaceTabView} tab
-     * @param {Wirecloud.Widget} model
-     * @param {Object} [options]
-     */
-    ns.WidgetView = function WidgetView(tab, model, options) {
-        se.StyledElement.call(this, [
-            'highlight',
-            'remove',
-            'unhighlight'
-        ]);
-
-        options = utils.merge({
-            template: Wirecloud.currentTheme.templates['wirecloud/workspace/widget']
-        }, options);
-
-        privates.set(this, {
-            layout: null,
-            minimized: false,
-            minimized_shape: null,
-            position: model.position,
-            shape: model.shape,
-            tab: tab
-        });
-
-        Object.defineProperties(this, {
-            id: {
-                value: model.id
-            },
-            layout: {
-                get: function () {
-                    return privates.get(this).layout;
-                },
-                set: function (new_layout) {
-                    privates.get(this).layout = new_layout;
-                    update.call(this);
-                }
-            },
-            minimized: {
-                get: function () {
-                    return privates.get(this).minimized;
-                }
-            },
-            model: {
-                value: model
-            },
-            position: {
-                get: function () {
-                    return utils.clone(privates.get(this).position);
-                }
-            },
-            shape: {
-                get: function () {
-                    return utils.clone(privates.get(this)[this.minimized ? 'minimized_shape' : 'shape']);
-                }
-            },
-            tab: {
-                get: function () {
-                    return privates.get(this).tab;
-                }
-            },
-            title: {
-                get: function () {
-                    return this.model.title;
-                }
-            },
-            titlevisible: {
-                get: () => {
-                    return this.titlevisibilitybutton.hasIconClassName('fa-eye');
-                }
-            }
-        });
-
-        this.wrapperElement = (new se.GUIBuilder()).parse(options.template, {
-            'closebutton': function (options, tcomponents, view) {
-                var button = new se.Button({
-                    plain: true,
-                    class: 'wc-remove',
-                    iconClass: 'fas fa-times',
-                    title: utils.gettext("Remove")
-                });
-
-                view.closebutton = button;
-                button.addEventListener('click', function () {
-                    view.remove();
-                });
-                return button;
-            },
-            'errorbutton': function (options, tcomponents, view) {
-                var button = new StyledElements.Button({
-                    plain: true,
-                    class: 'errorbutton',
-                    iconClass: 'fas fa-exclamation-triangle'
-                });
-
-                button.addEventListener('click', function (button) {
-                    var dialog = new Wirecloud.ui.LogWindowMenu(view.model.logManager);
-                    dialog.show();
-                });
-                button.disable();
-                view.errorbutton = button;
-                return button;
-            },
-            'grip': (options, tcomponents, view) => {
-                view.grip = document.createElement("i");
-                view.grip.className = "fas fa-grip-vertical";
-                return view.grip;
-            },
-            'menubutton': function (options, tcomponents, view) {
-                var button = new StyledElements.PopupButton({
-                    class: 'wc-menu-button',
-                    iconClass: 'fas fa-cogs',
-                    plain: true,
-                    title: utils.gettext("Menu")
-                });
-
-                view.menubutton = button;
-                button.popup_menu.append(new ns.WidgetViewMenuItems(view));
-                return button;
-            },
-            'minimizebutton': function (options, tcomponents, view) {
-                var button = new StyledElements.Button({
-                    iconClass: 'fas fa-minus',
-                    plain: true,
-                    title: utils.gettext("Minimize")
-                });
-
-                button.enable = view.model.isAllowed('minimize');
-                button.addEventListener('click', function (button) {
-                    view.toggleMinimizeStatus(true);
-                });
-                view.minimizebutton = button;
-                return button;
-            },
-            'title': function (options, tcomponents, view) {
-                var element = new StyledElements.EditableElement({initialContent: view.model.title});
-
-                element.addEventListener('change', function (element, new_title) {
-                    view.rename(new_title);
-                });
-                view.titleelement = element;
-                return element;
-            },
-            'titlevisibilitybutton': (options, tcomponents, view) => {
-                var button = new StyledElements.Button({
-                    plain: true,
-                    class: 'wc-titlevisibilitybutton',
-                    iconClass: 'fa-fw fas fa-eye-slash'
-                });
-
-                button.addEventListener('click', (button) => {
-                    view.toggleTitleVisibility(true);
-                });
-                view.titlevisibilitybutton = button;
-                return button;
-            },
-            'bottomresizehandle': function (options, tcomponents, view) {
-                var handle = new Wirecloud.ui.WidgetViewResizeHandle(view, {resizeLeftSide: true, fixWidth: true});
-
-                handle.addClassName("wc-bottom-resize-handle");
-                view.bottomresizehandle = handle;
-                return handle;
-            },
-            'leftresizehandle': function (options, tcomponents, view) {
-                var handle = new Wirecloud.ui.WidgetViewResizeHandle(view, {resizeLeftSide: true});
-
-                handle.addClassName("wc-bottom-left-resize-handle");
-                view.leftresizehandle = handle;
-                return handle;
-            },
-            'rightresizehandle': function (options, tcomponents, view) {
-                var handle = new Wirecloud.ui.WidgetViewResizeHandle(view, {resizeLeftSide: false});
-
-                handle.addClassName("wc-bottom-right-resize-handle");
-                view.rightresizehandle = handle;
-                return handle;
-            },
-            'iframe': function (options, tcomponents, view) {
-                return view.model.wrapperElement;
-            }
-        }, this).children[1];
-
-        if ('bottomresizehandle' in this) {
-            this.bottomresizehandle.setResizableElement(this.wrapperElement);
-        }
-        if ('leftresizehandle' in this) {
-            this.leftresizehandle.setResizableElement(this.wrapperElement);
-        }
-        if ('rightresizehandle' in this) {
-            this.rightresizehandle.setResizableElement(this.wrapperElement);
+    const update_buttons = function update_buttons() {
+        const editing = this.tab.workspace.editing;
+        const role = editing ? "editor" : "viewer";
+        if (this.grip) {
+            const editable = editing && !this.model.volatile && this.layout instanceof Wirecloud.ui.FreeLayout && (this.draggable == null || this.draggable.canDrag(null, {widget: this}, 'editor'));
+            const moveable = this.draggable != null && this.draggable.canDrag(null, {widget: this}, 'viewer');
+            this.grip.enabled = editable;
+            this.grip.hidden = !editable && !(moveable && this.layout instanceof Wirecloud.ui.FreeLayout);
+            this.grip.icon.classList.toggle("fa-anchor", !moveable);
+            this.grip.icon.classList.toggle("fa-grip-vertical", moveable);
+            this.grip.setTitle(moveable ? utils.gettext("Disallow to move this widget") : utils.gettext("Allow to move this widget"));
         }
 
-        this.wrapperElement.classList.add("wc-widget");
-        this.wrapperElement.setAttribute('data-id', model.id);
-
-        model.addEventListener('change', (widget, changes) => {
-            if (changes.indexOf('title') !== -1) {
-                this.titleelement.setTextContent(widget.title);
+        if (this.titlevisibilitybutton) {
+            this.titlevisibilitybutton.hidden = !editing;
+            this.titlevisibilitybutton.enabled = (!this.model.volatile && !this.minimized && editing);
+            this.titlevisibilitybutton.setTitle(this.model.titlevisible ? utils.gettext("Hide title") : utils.gettext("Show title"));
+            if (this.model.titlevisible) {
+                this.titlevisibilitybutton.replaceIconClassName("fa-eye-slash", "fa-eye");
+            } else {
+                this.titlevisibilitybutton.replaceIconClassName("fa-eye", "fa-eye-slash");
             }
-
-            if (changes.indexOf('meta') !== -1) {
-                update.call(this);
-            }
-        });
-
-        model.addEventListener('unload', (widget) => {
-            this.unhighlight();
-        });
-
-        this.heading = this.wrapperElement.getElementsByClassName('wc-widget-heading')[0];
-
-        // TODO: review
-        var layout;
-        if (model.fulldragboard) {
-            layout = tab.dragboard.fulldragboardLayout;
-            this.previousLayout = model.layout === 0 ? tab.dragboard.baseLayout : tab.dragboard.freeLayout;
-            this.previousPosition = model.position;
-        } else {
-            layout = model.layout === 0 ? tab.dragboard.baseLayout : tab.dragboard.freeLayout
         }
-        layout.addWidget(this, true);
+        this.closebutton.hidden = !(this.model.volatile || editing) || !this.model.isAllowed('close', role);
+        this.menubutton.hidden = !editing;
 
-        // Mark as draggable
-        this.draggable = new Wirecloud.ui.WidgetViewDraggable(this);
+        this.bottomresizehandle.enabled = (this.model.volatile || editing) && this.model.isAllowed('resize', role);
+        this.leftresizehandle.enabled = (this.model.volatile || editing) && this.model.isAllowed('resize', role);
+        this.rightresizehandle.enabled = (this.model.volatile || editing) && this.model.isAllowed('resize', role);
+    };
 
-        // Init minimized and title visibility options
-        this.setMinimizeStatus(model.minimized, false, true);
-        this.setTitleVisibility(model.titlevisible, false);
+    const update_className = function update_className() {
+        this.wrapperElement.classList.toggle('wc-missing-widget', this.model.missing);
+        this.wrapperElement.classList.toggle('wc-floating-widget', this.layout != null && this.layout instanceof Wirecloud.ui.FreeLayout);
+        this.wrapperElement.classList.toggle('wc-moveable-widget', this.draggable != null && this.draggable.canDrag(null, {widget: this}));
+        this.wrapperElement.classList.toggle('wc-titled-widget', this.model.titlevisible);
+    };
 
-        this.model.logManager.addEventListener('newentry', on_add_log.bind(this));
+    const update = function update() {
+        update_className.call(this);
+        update_buttons.call(this);
+    };
 
-        this.wrapperElement.addEventListener('transitionend', function (e) {
-            if (this.layout.iwidgetToMove == null && ['width', 'height', 'top', 'left'].indexOf(e.propertyName) !== -1) {
-                this.repaint();
-                notify_shape.call(this);
-            }
-        }.bind(this), true);
+    const update_position = function update_position() {
+        this.layout.updatePosition(this, this.wrapperElement);
+        this.wrapperElement.style.zIndex = this.position.z + 1;
+    };
 
-        model.addEventListener('load', function (model) {
+    const update_shape = function update_shape() {
+        this.layout.updateShape(this, this.wrapperElement);
+    };
 
-            this.wrapperElement.classList.add('in');
+    const notify_position = function notify_position() {
+        this.model.contextManager.modify({
+            'xPosition': this.position.x,
+            'yPosition': this.position.y,
+            'zPosition': this.position.z
+        });
+    };
 
-            model.wrapperElement.contentDocument.defaultView.addEventListener('keydown', function (event) {
-                if (event.keyCode === 27) { // escape
-                    Wirecloud.UserInterfaceManager.handleEscapeEvent();
-                }
-            }, true);
+    const notify_shape = function notify_shape() {
+        this.model.contextManager.modify({
+            'height': this.shape.height,
+            'width': this.shape.width,
+            'heightInPixels': this.model.wrapperElement.offsetHeight,
+            'widthInPixels': this.model.wrapperElement.offsetWidth
+        });
+    };
 
-            model.wrapperElement.contentDocument.defaultView.addEventListener('click', function () {
-                Wirecloud.UserInterfaceManager.handleEscapeEvent();
-                this.unhighlight();
-            }.bind(this), true);
-
-            this.repaint();
-        }.bind(this));
-
-        this.tab.workspace.addEventListener('editmode', update.bind(this));
-        model.addEventListener('remove', on_remove.bind(this));
+    const update_widget_visibility = function update_widget_visibility() {
+        this.model.contextManager.modify({
+            visible: !this.minimized && !this.tab.hidden && !this.tab.workspace.hidden
+        });
     };
 
     // =========================================================================
-    // PUBLIC MEMBERS
+    // EVENT HANDLERS
     // =========================================================================
 
-    utils.inherit(ns.WidgetView, se.StyledElement, {
+    const on_add_log = function on_add_log() {
+        const errorCount = this.model.logManager.errorCount;
+        this.errorbutton.hidden = errorCount === 0;
+
+        const label = utils.interpolate(
+            utils.ngettext("%(errorCount)s error", "%(errorCount)s errors", errorCount),
+            {errorCount: errorCount},
+            true
+        );
+        this.errorbutton.setTitle(label);
+    };
+
+    const on_remove = function on_remove() {
+        this.dispatchEvent('remove');
+    };
+
+    ns.WidgetView = class WidgetView extends se.StyledElement {
+
+        /**
+         * @name Wirecloud.UI.WidgetView
+         *
+         * @extends {StyledElements.StyledElement}
+         * @constructor
+         *
+         * @param {Wirecloud.UI.WorkspaceTabView} tab
+         * @param {Wirecloud.Widget} model
+         * @param {Object} [options]
+         */
+        constructor(tab, model, options) {
+            super([
+                'highlight',
+                'remove',
+                'unhighlight'
+            ]);
+
+            options = utils.merge({
+                template: Wirecloud.currentTheme.templates['wirecloud/workspace/widget']
+            }, options);
+
+            privates.set(this, {
+                layout: null,
+                minimized: false,
+                minimized_shape: null,
+                position: model.position,
+                shape: model.shape,
+                tab: tab
+            });
+
+            Object.defineProperties(this, {
+                id: {
+                    value: model.id
+                },
+                layout: {
+                    get: function () {
+                        return privates.get(this).layout;
+                    },
+                    set: function (new_layout) {
+                        privates.get(this).layout = new_layout;
+                        update.call(this);
+                    }
+                },
+                minimized: {
+                    get: function () {
+                        return privates.get(this).minimized;
+                    }
+                },
+                model: {
+                    value: model
+                },
+                position: {
+                    get: function () {
+                        return utils.clone(privates.get(this).position);
+                    }
+                },
+                shape: {
+                    get: function () {
+                        return utils.clone(privates.get(this)[this.minimized ? 'minimized_shape' : 'shape']);
+                    }
+                },
+                tab: {
+                    get: function () {
+                        return privates.get(this).tab;
+                    }
+                },
+                title: {
+                    get: () => {
+                        return this.model.title;
+                    }
+                },
+                titlevisible: {
+                    get: () => {
+                        return this.model.titlevisible;
+                    }
+                }
+            });
+
+            this.wrapperElement = (new se.GUIBuilder()).parse(options.template, {
+                'closebutton': function (options, tcomponents, view) {
+                    const button = new se.Button({
+                        plain: true,
+                        class: 'wc-remove',
+                        iconClass: 'fas fa-times',
+                        title: utils.gettext("Remove")
+                    });
+
+                    view.closebutton = button;
+                    button.addEventListener('click', function () {
+                        view.remove();
+                    });
+                    return button;
+                },
+                'errorbutton': function (options, tcomponents, view) {
+                    const button = new StyledElements.Button({
+                        plain: true,
+                        class: 'errorbutton',
+                        iconClass: 'fas fa-exclamation-triangle'
+                    });
+
+                    button.hide().addEventListener('click', function (button) {
+                        const dialog = new Wirecloud.ui.LogWindowMenu(view.model.logManager);
+                        dialog.show();
+                    });
+                    view.errorbutton = button;
+                    return button;
+                },
+                'grip': (options, tcomponents, view) => {
+                    view.grip = new StyledElements.Button({
+                        plain: true,
+                        class: 'wc-grip-button',
+                        iconClass: 'fa-fw fas fa-grip-vertical'
+                    });
+                    view.grip.addEventListener('click', (button) => {
+                        button.disable().addClassName('busy');
+                        view.togglePermission('move', true).finally(() => {
+                            button.enable().removeClassName('busy');
+                        });
+                    });
+                    return view.grip;
+                },
+                'menubutton': function (options, tcomponents, view) {
+                    const button = new StyledElements.PopupButton({
+                        class: 'wc-menu-button',
+                        iconClass: 'fas fa-cogs',
+                        plain: true,
+                        title: utils.gettext("Menu")
+                    });
+
+                    view.menubutton = button;
+                    button.popup_menu.append(new ns.WidgetViewMenuItems(view));
+                    return button;
+                },
+                'minimizebutton': function (options, tcomponents, view) {
+                    const button = new StyledElements.Button({
+                        iconClass: 'fas fa-minus',
+                        plain: true,
+                        title: utils.gettext("Minimize")
+                    });
+
+                    button.enable = view.model.isAllowed('minimize');
+                    button.addEventListener('click', function (button) {
+                        view.toggleMinimizeStatus(true);
+                    });
+                    view.minimizebutton = button;
+                    return button;
+                },
+                'title': function (options, tcomponents, view) {
+                    const element = new StyledElements.EditableElement({initialContent: view.model.title});
+
+                    element.addEventListener('change', function (element, new_title) {
+                        view.model.rename(new_title);
+                    });
+                    view.titleelement = element;
+                    return element;
+                },
+                'titlevisibilitybutton': (options, tcomponents, view) => {
+                    const button = new StyledElements.Button({
+                        plain: true,
+                        class: 'wc-titlevisibility-button',
+                        iconClass: 'fa-fw fas fa-eye-slash'
+                    });
+
+                    button.addEventListener('click', (button) => {
+                        view.toggleTitleVisibility(true);
+                    });
+                    view.titlevisibilitybutton = button;
+                    return button;
+                },
+                'bottomresizehandle': function (options, tcomponents, view) {
+                    const handle = new Wirecloud.ui.WidgetViewResizeHandle(view, {resizeLeftSide: true, fixWidth: true});
+
+                    handle.addClassName("wc-bottom-resize-handle");
+                    view.bottomresizehandle = handle;
+                    return handle;
+                },
+                'leftresizehandle': function (options, tcomponents, view) {
+                    const handle = new Wirecloud.ui.WidgetViewResizeHandle(view, {resizeLeftSide: true});
+
+                    handle.addClassName("wc-bottom-left-resize-handle");
+                    view.leftresizehandle = handle;
+                    return handle;
+                },
+                'rightresizehandle': function (options, tcomponents, view) {
+                    const handle = new Wirecloud.ui.WidgetViewResizeHandle(view, {resizeLeftSide: false});
+
+                    handle.addClassName("wc-bottom-right-resize-handle");
+                    view.rightresizehandle = handle;
+                    return handle;
+                },
+                'iframe': function (options, tcomponents, view) {
+                    return view.model.wrapperElement;
+                }
+            }, this).children[1];
+
+            if ('bottomresizehandle' in this) {
+                this.bottomresizehandle.setResizableElement(this.wrapperElement);
+            }
+            if ('leftresizehandle' in this) {
+                this.leftresizehandle.setResizableElement(this.wrapperElement);
+            }
+            if ('rightresizehandle' in this) {
+                this.rightresizehandle.setResizableElement(this.wrapperElement);
+            }
+
+            this.wrapperElement.classList.add("wc-widget");
+            this.wrapperElement.setAttribute('data-id', model.id);
+
+            model.addEventListener('change', (widget, changes) => {
+                if (changes.indexOf('title') !== -1) {
+                    this.titleelement.setTextContent(widget.title);
+                }
+
+                if (changes.indexOf('meta') !== -1 || changes.indexOf('permissions') !== -1 || changes.indexOf('titlevisible') !== -1) {
+                    update.call(this);
+                }
+            });
+
+            model.addEventListener('unload', (widget) => {
+                this.unhighlight();
+            });
+
+            this.heading = this.wrapperElement.getElementsByClassName('wc-widget-heading')[0];
+            this.draggable = new Wirecloud.ui.WidgetViewDraggable(this);
+
+
+            // TODO: review
+            let layout;
+            if (model.fulldragboard) {
+                layout = tab.dragboard.fulldragboardLayout;
+                this.previousLayout = tab.dragboard.layouts[model.layout];
+                this.previousPosition = model.position;
+                this.previousShape = model.shape;
+            } else {
+                layout = tab.dragboard.layouts[model.layout];
+            }
+            layout.addWidget(this, true);
+
+            // Init minimized and title visibility options
+            this.setMinimizeStatus(model.minimized, false, true);
+
+            this.model.logManager.addEventListener('newentry', on_add_log.bind(this));
+
+            this.wrapperElement.addEventListener('transitionend', function (e) {
+                if (this.layout.iwidgetToMove == null && ['width', 'height', 'top', 'left'].indexOf(e.propertyName) !== -1) {
+                    this.repaint();
+                    notify_shape.call(this);
+                }
+            }.bind(this), true);
+
+            model.addEventListener('load', (model) => {
+
+                this.wrapperElement.classList.add('in');
+
+                const containerToListen = (model.meta.macversion > 1) ? model.wrapperElement : model.wrapperElement.contentDocument.defaultView;
+
+                containerToListen.addEventListener('keydown', (event) => {
+                    if (event.keyCode === 27) { // escape
+                        Wirecloud.UserInterfaceManager.handleEscapeEvent();
+                    }
+                }, true);
+
+                containerToListen.addEventListener('click', () => {
+                    Wirecloud.UserInterfaceManager.handleEscapeEvent(true);
+                    this.unhighlight();
+                }, true);
+
+                this.repaint();
+            });
+
+            this.tab.workspace.addEventListener('editmode', update.bind(this));
+            model.addEventListener('remove', on_remove.bind(this));
+
+            this.tab.workspace.addEventListener('show', update_widget_visibility.bind(this));
+            this.tab.workspace.addEventListener('hide', update_widget_visibility.bind(this));
+            this.tab.addEventListener('show', update_widget_visibility.bind(this));
+            this.tab.addEventListener('hide', update_widget_visibility.bind(this));
+
+            update.call(this);
+        }
 
         /**
          * Changes minimize status of this iwidget
          *
          * @param newStatus new minimize status of the iwidget
          */
-        setMinimizeStatus: function setMinimizeStatus(newStatus, persistence, reserveSpace) {
-            var oldHeight = this.shape.height;
+        setMinimizeStatus(newStatus, persistence, reserveSpace) {
+            const priv = privates.get(this);
+
+            // Sanitize newStatus value
+            newStatus = !!newStatus;
 
             if (newStatus === this.minimized) {
                 return this;
             }
 
-            privates.get(this).minimized = newStatus;
+            const oldHeight = this.shape.height;
+            priv.minimized = newStatus;
 
             if (this.minimized) {
                 this.minimizebutton.setTitle(utils.gettext("Maximize"));
                 this.minimizebutton.replaceIconClassName("fa-minus", "fa-plus");
                 this.wrapperElement.classList.add('wc-minimized-widget');
                 this.wrapperElement.style.height = "";
-                privates.get(this).minimized_shape = {
+                priv.minimized_shape = {
+                    relheight: true,
                     height: this.layout.adaptHeight(this.wrapperElement.offsetHeight + 'px').inLU,
-                    width: privates.get(this).shape.width
+                    relwidth: priv.shape.relwidth,
+                    width: priv.shape.width
                 };
-                this.setTitleVisibility(true, false);
+                this.model.setTitleVisibility(true, false);
             } else {
                 this.minimizebutton.setTitle(utils.gettext("Minimize"));
                 this.minimizebutton.replaceIconClassName("fa-plus", "fa-minus");
                 this.wrapperElement.classList.remove('wc-minimized-widget');
-                this.wrapperElement.style.height = this.layout.getHeightInPixels(privates.get(this).shape.height) + 'px';
-                privates.get(this).minimized_shape = null;
+                this.wrapperElement.style.height = this.layout.getHeightInPixels(priv.shape.height) + 'px';
+                priv.minimized_shape = null;
             }
 
             this.model.contextManager.modify({
-                'height': this.shape.height,
-                'heightInPixels': this.model.wrapperElement.offsetHeight
+                height: this.shape.height,
+                heightInPixels: this.model.wrapperElement.offsetHeight,
+                visible: !priv.minimized && !this.tab.hidden && !this.tab.workspace.hidden
             });
 
             // Notify resize event
             reserveSpace = reserveSpace != null ? reserveSpace : true;
             if (reserveSpace) {
-                var persist = persistence != null ? persistence : true;
-                this.layout._notifyResizeEvent(this, this.shape.width, oldHeight, this.shape.width,  this.shape.height, false, persist, reserveSpace);
+                const persist = persistence != null ? persistence : true;
+                this.layout._notifyResizeEvent(this, this.shape.width, oldHeight, this.shape.width,  this.shape.height, false, false, persist, reserveSpace);
             }
 
             update.call(this);
             return this;
-        },
-
-        /**
-         * Changes title visibility for this widget
-         *
-         * @param {Boolean} newStatus new title visibility status for this widget
-         * @param {Boolean} persistence save change on server
-         */
-        setTitleVisibility: function setTitleVisibility(newStatus, persistence) {
-
-            if (newStatus === this.titlevisible) {
-                return this;
-            }
-
-            let p = persistence ? this.model.setTitleVisibility(newStatus) : Promise.resolve();
-
-            return p.then(
-                () => {
-                    this.titlevisibilitybutton.setTitle(newStatus ? utils.gettext("Hide title") : utils.gettext("Show title"));
-                    this.wrapperElement.classList.toggle('wc-titled-widget', newStatus);
-                    if (newStatus) {
-                        this.titlevisibilitybutton.replaceIconClassName("fa-eye-slash", "fa-eye");
-                    } else {
-                        this.titlevisibilitybutton.replaceIconClassName("fa-eye", "fa-eye-slash");
-                    }
-                },
-                () => {
-                }
-            );
-        },
+        }
 
         /**
          * Toggles title visibility
          *
          * @param {Boolean} persistence save change on server
          */
-        toggleTitleVisibility: function toggleTitleVisibility(persistence) {
-            this.setTitleVisibility(!this.titlevisible, persistence);
-        },
+        toggleTitleVisibility(persistence) {
+            this.titlevisibilitybutton.disable().addClassName('busy');
+            const t = this.model.setTitleVisibility(!this.titlevisible, persistence);
+            t.finally(() => {this.titlevisibilitybutton.enable().removeClassName('busy');});
+            return t;
+        }
 
-        setPosition: function setPosition(position) {
+        /**
+         * Toggles a widget permission
+         *
+         * @param {String} permission permission to toggle
+         * @param {Boolean} persistence save change on server
+         *
+         * @return {Wirecloud.Task} task instance controlling the progress
+         */
+        togglePermission(permission, persistence) {
+            const changes = {
+                [permission]: !this.model.permissions.viewer[permission]
+            };
+            return this.model.setPermissions(changes, persistence);
+        }
+
+        setPosition(position) {
             utils.update(privates.get(this).position, position);
             if (this.layout != null) {
                 update_position.call(this);
                 notify_position.call(this);
             }
-        },
+            return this;
+        }
 
-        setShape: function setShape(shape, resizeLeftSide, persist) {
-            var oldWidth = this.shape.width;
-            var oldHeight = this.shape.height;
+        setShape(shape, resizeLeftSide, resizeTopSide, persist) {
+            const oldWidth = this.shape.width;
+            const oldHeight = this.shape.height;
 
             utils.update(privates.get(this).shape, shape);
 
@@ -409,10 +512,10 @@
             notify_shape.call(this);
 
             // Notify resize event
-            this.layout._notifyResizeEvent(this, oldWidth, oldHeight, this.shape.width, this.shape.height, resizeLeftSide, persist);
-        },
+            this.layout._notifyResizeEvent(this, oldWidth, oldHeight, this.shape.width, this.shape.height, resizeLeftSide, resizeTopSide, persist);
+        }
 
-        load: function load() {
+        load() {
 
             if (!this.model.loaded) {
                 this.wrapperElement.classList.add('in');
@@ -420,12 +523,12 @@
             }
 
             return this.repaint();
-        },
+        }
 
         /**
          * Updates widget size and position css
          */
-        repaint: function repaint() {
+        repaint() {
 
             update_position.call(this);
             update_shape.call(this);
@@ -434,24 +537,24 @@
             notify_shape.call(this);
 
             return this;
-        },
+        }
 
-        reload: function reload() {
+        reload() {
             this.model.reload();
             return this;
-        },
+        }
 
-        showLogs: function showLogs() {
+        showLogs() {
             this.model.showLogs();
             return this;
-        },
+        }
 
-        showSettings: function showSettings() {
+        showSettings() {
             this.model.showSettings();
             return this;
-        },
+        }
 
-        highlight: function highlight() {
+        highlight() {
             this.wrapperElement.classList.add('panel-success');
             this.wrapperElement.classList.remove('panel-default');
             if (!this.wrapperElement.classList.contains('wc-widget-highlight')) {
@@ -460,15 +563,15 @@
             } else {
                 // Reset highlighting animation
                 this.wrapperElement.classList.remove('wc-widget-highlight');
-                setTimeout(function () {
+                setTimeout(() => {
                     this.wrapperElement.classList.add('wc-widget-highlight');
-                }.bind(this));
+                });
             }
 
             return this;
-        },
+        }
 
-        unhighlight: function unhighlight() {
+        unhighlight() {
             this.wrapperElement.classList.remove('panel-success');
             this.wrapperElement.classList.add('panel-default');
             if (this.wrapperElement.classList.contains('wc-widget-highlight')) {
@@ -477,89 +580,108 @@
             }
 
             return this;
-        },
+        }
 
-        moveToLayout: function moveToLayout(newLayout) {
-            var affectedWidgetsRemoving, affectedWidgetsAdding,
-                minimizeOnFinish, p, previousWidth, previousHeight,
-                dragboardChange, oldLayout, oldPositionPixels;
-
+        moveToLayout(newLayout) {
             if (this.layout === newLayout) {
-                return;
+                return Promise.resolve();
             }
 
-            minimizeOnFinish = false;
+            const priv = privates.get(this);
+            let minimizeOnFinish = false;
             if (this.minimized) {
                 minimizeOnFinish = true;
                 this.toggleMinimizeStatus();
             }
 
-            previousWidth = this.wrapperElement.offsetWidth;
-            previousHeight = this.wrapperElement.offsetHeight;
+            const previousWidth = this.wrapperElement.offsetWidth;
+            const previousHeight = this.wrapperElement.offsetHeight;
 
-            dragboardChange = this.layout.dragboard !== newLayout.dragboard || privates.get(this).tab !== newLayout.dragboard.tab;
-            oldLayout = this.layout;
+            const tabChange = priv.tab !== newLayout.dragboard.tab;
+            const dragboardChange = this.layout.dragboard !== newLayout.dragboard || tabChange;
+            const oldLayout = this.layout;
 
-            affectedWidgetsRemoving = oldLayout.removeWidget(this, dragboardChange);
+            const affectedWidgetsRemoving = oldLayout.removeWidget(this, dragboardChange);
 
             if (oldLayout instanceof Wirecloud.ui.FullDragboardLayout) {
                 this.setShape(this.previousShape);
+            } else if (newLayout instanceof Wirecloud.ui.FreeLayout) {
+                this.setShape({
+                    relwidth: true,
+                    width: newLayout.adaptWidth(previousWidth + 'px').inLU,
+                    relheight: false,
+                    height: newLayout.adaptHeight(previousHeight + 'px').inPixels
+                });
             } else {
                 this.setShape({
+                    relwidth: true,
                     width: newLayout.adaptWidth(previousWidth + 'px').inLU,
+                    relheight: true,
                     height: newLayout.adaptHeight(previousHeight + 'px').inLU
                 });
             }
 
             if (dragboardChange && !(newLayout instanceof Wirecloud.ui.FreeLayout)) {
-                this.setPosition(newLayout._searchFreeSpace(this.shape.width, this.shape.height));
+                const newposition = newLayout._searchFreeSpace(this.shape.width, this.shape.height);
+                newposition.relx = true;
+                newposition.rely = true;
+                newposition.anchor = "top-left";
+                this.setPosition(newposition);
             } else if (oldLayout instanceof Wirecloud.ui.FullDragboardLayout) {
                 this.setPosition(this.previousPosition);
             } else {
-                oldPositionPixels = {
-                    x: oldLayout.getColumnOffset(this.position.x) - oldLayout.dragboardLeftMargin,
-                    y: oldLayout.getRowOffset(this.position.y) - oldLayout.dragboardTopMargin
+                const oldPositionPixels = {
+                    x: oldLayout.getColumnOffset(this.position),
+                    y: oldLayout.getRowOffset(this.position)
                 };
-                this.setPosition({
-                    x: newLayout.adaptColumnOffset(oldPositionPixels.x + 'px').inLU,
-                    y: newLayout.adaptRowOffset(oldPositionPixels.y + 'px').inLU
-                });
+                if (newLayout instanceof Wirecloud.ui.FreeLayout) {
+                    this.setPosition({
+                        x: newLayout.adaptColumnOffset(oldPositionPixels.x + 'px').inLU,
+                        y: newLayout.adaptRowOffset(oldPositionPixels.y + 'px').inPixels,
+                        relx: true,
+                        rely: false,
+                        anchor: "top-left"
+                    });
+                } else {
+                    this.setPosition({
+                        x: newLayout.adaptColumnOffset(oldPositionPixels.x + 'px').inLU,
+                        y: newLayout.adaptRowOffset(oldPositionPixels.y + 'px').inLU,
+                        relx: true,
+                        rely: true,
+                        anchor: "top-left"
+                    });
+                }
             }
 
-            affectedWidgetsAdding = newLayout.addWidget(this, dragboardChange);
-            privates.get(this).tab = newLayout.dragboard.tab;
+            const affectedWidgetsAdding = newLayout.addWidget(this, dragboardChange);
+            priv.tab = newLayout.dragboard.tab;
 
             if (minimizeOnFinish) {
                 this.toggleMinimizeStatus();
             }
 
-            // if the widget hasn't been taken to another tab and
-            // the movement affects the rest of widgets
-            p = this.update();
-            if (dragboardChange && (affectedWidgetsRemoving || affectedWidgetsAdding)) {
-                if (affectedWidgetsRemoving) {
-                    p.then(function () {
-                        return oldLayout.dragboard.update();
-                    });
+            // Persist changes
+            this.model.changeTab(newLayout.dragboard.tab.model).then(() => {
+                affectedWidgetsAdding.add(this.id);
+                if (dragboardChange) {
+                    oldLayout.dragboard.update([...affectedWidgetsRemoving]);
+                    newLayout.dragboard.update([...affectedWidgetsAdding]);
+                } else {
+                    newLayout.dragboard.update([...utils.setupdate(affectedWidgetsAdding, affectedWidgetsRemoving)]);
                 }
-                if (affectedWidgetsAdding) {
-                    p.then(function () {
-                        return newLayout.dragboard.update();
-                    });
-                }
-            }
-        },
+            });
+        }
 
-        toggleMinimizeStatus: function toggleMinimizeStatus(persistence) {
+        toggleMinimizeStatus(persistence) {
             this.setMinimizeStatus(!this.minimized, persistence);
-        },
+        }
 
-        setFullDragboardMode: function setFullDragboardMode(enable) {
+        setFullDragboardMode(enable) {
             if ((this.layout === this.tab.dragboard.fulldragboardLayout) === enable) {
-                return;
+                return this;
             }
 
-            var dragboard = this.layout.dragboard;
+            const dragboard = this.layout.dragboard;
 
             if (enable) {
                 this.previousShape = this.shape;
@@ -573,166 +695,50 @@
             }
             this.model.fulldragboard = enable;
 
-            dragboard.update([this.model.id]);
             update.call(this);
-        },
+            return this;
+        }
 
-        toggleLayout: function toggleLayout() {
-            if (this.layout === this.tab.dragboard.freeLayout) {
-                this.moveToLayout(this.layout.dragboard.baseLayout);
-            } else {
-                this.moveToLayout(this.layout.dragboard.freeLayout);
-            }
-        },
-
-        update: function update() {
-            return this.model.changeTab(this.tab.model);
-        },
-
-        toJSON: function toJSON() {
-            var data = {
+        toJSON() {
+            const fulldragboard = this.layout === this.tab.dragboard.fulldragboardLayout;
+            const shape = fulldragboard ? this.previousShape : this.shape;
+            const position = fulldragboard ? this.previousPosition : this.position;
+            return {
                 id: this.id,
                 tab: this.tab.id,
-                layout: this.layout === this.tab.dragboard.freeLayout ? 1 : 0
+                layout: this.tab.dragboard.layouts.indexOf(fulldragboard ? this.previousLayout : this.layout),
+                // position
+                anchor: position.anchor,
+                relx: position.relx,
+                rely: position.rely,
+                top: position.y,
+                left: position.x,
+                zIndex: position.z,
+                // shape
+                minimized: this.minimized,
+                relwidth: shape.relwidth,
+                width: shape.width,
+                relheight: shape.relheight,
+                height: privates.get(this).shape.height,
+                fulldragboard: fulldragboard,
+                titlevisible: this.titlevisible
             };
+        }
 
-            if (!this.tab.workspace.restricted) {
-                data.minimized = this.minimized;
-            }
-
-            if (this.layout !== this.tab.dragboard.fulldragboardLayout) {
-                data.top = this.position.y;
-                data.left = this.position.x;
-                data.zIndex = this.position.z;
-                data.width = this.shape.width;
-                data.height = privates.get(this).shape.height;
-                data.fulldragboard = false;
-            } else {
-                data.top = this.previousPosition.y;
-                data.left = this.previousPosition.x;
-                data.zIndex = this.previousPosition.z;
-                if (this.previousShape != null) {
-                    data.width = this.previousShape.width;
-                    data.height = this.previousShape.height;
-                } else {
-                    data.width = this.shape.width;
-                    data.height = this.shape.height;
-                }
-                data.fulldragboard = true;
-            }
-            data.titlevisible = this.titlevisible;
-
-            return data;
-        },
-
-        persist: function persist() {
+        persist() {
             if (!this.model.volatile) {
                 this.model.setPosition(this.position);
                 this.model.setShape(privates.get(this).shape);
             }
 
             return this;
-        },
+        }
 
-        remove: function remove() {
+        remove() {
             this.model.remove();
             return this;
-        },
-
-        rename: function rename(title) {
-            this.model.rename(title);
-            return this;
         }
 
-    });
-
-    // =========================================================================
-    // PRIVATE MEMBERS
-    // =========================================================================
-
-    var privates = new WeakMap();
-
-    var update_buttons = function update_buttons() {
-        var editing = this.tab.workspace.editing;
-        if (this.grip) {
-            this.grip.classList.toggle("disabled", this.draggable == null || !this.draggable.canDrag(null, {widget: this}));
-        }
-
-        if (this.titlevisibilitybutton) {
-            this.titlevisibilitybutton.enabled = (!this.model.volatile && !this.minimized && editing);
-        }
-        this.closebutton.enabled = (this.model.volatile || editing) && this.model.isAllowed('close');
-        this.menubutton.enabled = editing;
-
-        this.bottomresizehandle.enabled = (this.model.volatile || editing) && this.model.isAllowed('resize');
-        this.leftresizehandle.enabled = (this.model.volatile || editing) && this.model.isAllowed('resize');
-        this.rightresizehandle.enabled = (this.model.volatile || editing) && this.model.isAllowed('resize');
-    };
-
-    var update_className = function update_className() {
-        this.wrapperElement.classList.toggle('wc-missing-widget', this.model.missing);
-        this.wrapperElement.classList.toggle('wc-floating-widget', this.layout != null && this.layout instanceof Wirecloud.ui.FreeLayout);
-        this.wrapperElement.classList.toggle('wc-moveable-widget', this.draggable != null && this.draggable.canDrag(null, {widget: this}));
-    };
-
-    var update = function update() {
-        update_className.call(this);
-        update_buttons.call(this);
-    };
-
-    var update_position = function update_position() {
-        this.layout.updatePosition(this, this.wrapperElement);
-        this.wrapperElement.style.zIndex = this.position.z + 1;
-    };
-
-    var update_shape = function update_shape() {
-        let width = this.layout.getWidthInPixels(this.shape.width);
-        if (width != null) {
-            this.wrapperElement.style.width = width + 'px';
-        } else {
-            this.wrapperElement.style.width = "";
-        }
-
-        let height = this.minimized ? null : this.layout.getHeightInPixels(this.shape.height);
-        if (height != null) {
-            this.wrapperElement.style.height = height + 'px';
-        } else {
-            this.wrapperElement.style.height = "";
-        }
-    };
-
-    var notify_position = function notify_position() {
-        this.model.contextManager.modify({
-            'xPosition': this.position.x,
-            'yPosition': this.position.y,
-            'zPosition': this.position.z
-        });
-    };
-
-    var notify_shape = function notify_shape() {
-        this.model.contextManager.modify({
-            'height': this.shape.height,
-            'width': this.shape.width,
-            'heightInPixels': this.model.wrapperElement.offsetHeight,
-            'widthInPixels': this.model.wrapperElement.offsetWidth
-        });
-    };
-
-    // =========================================================================
-    // EVENT HANDLERS
-    // =========================================================================
-
-    var on_add_log = function on_add_log() {
-        var label, errorCount = this.model.logManager.errorCount;
-        this.errorbutton.enabled = errorCount !== 0;
-
-        label = utils.ngettext("%(errorCount)s error", "%(errorCount)s errors", errorCount);
-        label = utils.interpolate(label, {errorCount: errorCount}, true);
-        this.errorbutton.setTitle(label);
-    };
-
-    var on_remove = function on_remove() {
-        this.dispatchEvent('remove');
-    };
+    }
 
 })(Wirecloud.ui, StyledElements, StyledElements.Utils);

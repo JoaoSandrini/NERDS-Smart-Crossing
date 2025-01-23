@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2008-2017 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2020-2021 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -37,7 +38,7 @@ if (window.StyledElements == null) {
     /**
      * @namespace StyledElements.Utils
      */
-    var Utils = {};
+    const Utils = {};
 
     /**
      * Overwrite the following method for supporting translations
@@ -58,13 +59,13 @@ if (window.StyledElements == null) {
      * patrón vienen indicados mediante sentencias "%(nombre)s". Por ejemplo,
      * al finalizar la ejecución del siguiente código:
      * <code>
-     *     var date = {year: 2009, month: 3, day: 27};
+     *     const date = {year: 2009, month: 3, day: 27};
      *
-     *     var pattern1 = "%(year)s/%(month)s/%(day)s";
-     *     var result1 = Utils.interpolate(pattern, date);
+     *     const pattern1 = "%(year)s/%(month)s/%(day)s";
+     *     const result1 = Utils.interpolate(pattern, date);
      *
-     *     var pattern2 = "%(day)s/%(month)s/%(year)s";
-     *     var result2 = Utils.interpolate(pattern, date);
+     *     const pattern2 = "%(day)s/%(month)s/%(year)s";
+     *     const result2 = Utils.interpolate(pattern, date);
      * </code>
      *
      * obtendríamos "2009/3/27" en result1 y "27/3/2009" en result2
@@ -194,10 +195,10 @@ if (window.StyledElements == null) {
      *
      * @example
      *
-     * var user_input = "Case inSensitive search";
+     * const user_input = "Case inSensitive search";
      * new RegExp(escapeRegExp(user_input), "i");
      *
-     * var user_input = "RegExp with user input";
+     * const user_input = "RegExp with user input";
      * new RegExp(escapeRegExp(user_input) + "... (OK|FAIL|ERROR)")
      */
     Utils.escapeRegExp = function escapeRegExp(text) {
@@ -205,7 +206,7 @@ if (window.StyledElements == null) {
     };
 
     // Temporal element used by escapeHTML
-    var tmp_div = document.createElement('div');
+    const tmp_div = document.createElement('div');
 
     /**
      * Escapes the characters in a String using HTML entities.
@@ -218,7 +219,7 @@ if (window.StyledElements == null) {
      *
      * @example
      *
-     * var user_input = "<hello> world";
+     * const user_input = "<hello> world";
      * new Frament("User input: " + escapeHTML(user_input));
      */
     Utils.escapeHTML = function escapeHTML(text) {
@@ -243,8 +244,8 @@ if (window.StyledElements == null) {
             return {x: 0, y: 0};
         }
 
-        var element1_rect = element1.getBoundingClientRect();
-        var element2_rect = element2.getBoundingClientRect();
+        const element1_rect = element1.getBoundingClientRect();
+        const element2_rect = element2.getBoundingClientRect();
 
         return {x: element1_rect.left - element2_rect.left, y: element1_rect.top - element2_rect.top};
     };
@@ -253,7 +254,7 @@ if (window.StyledElements == null) {
      * @experimental
      */
     Utils.clone = function clone(object, deep) {
-        var result, key;
+        let result;
 
         if (object == null || typeof object !== 'object') {
             return object;
@@ -264,11 +265,11 @@ if (window.StyledElements == null) {
         }
 
         if (deep) {
-            for (key in object) {
+            for (const key in object) {
                 result[key] = Utils.clone(object[key], true);
             }
         } else {
-            for (key in object) {
+            for (const key in object) {
                 result[key] = object[key];
             }
         }
@@ -277,7 +278,7 @@ if (window.StyledElements == null) {
     };
 
     Utils.cloneObject = function cloneObject(source) {
-        var target = {};
+        const target = {};
 
         if (source == null) {
             return target;
@@ -287,14 +288,14 @@ if (window.StyledElements == null) {
             throw new TypeError("[error description]");
         }
 
-        for (var name in source) {
+        for (const name in source) {
             target[name] = cloneProp.call(Utils, source[name]);
         }
 
         return target;
     };
 
-    var cloneProp = function cloneProp(sourceValue) {
+    const cloneProp = function cloneProp(sourceValue) {
         if (sourceValue == null) {
             return null;
         }
@@ -338,7 +339,7 @@ if (window.StyledElements == null) {
         target = Utils.cloneObject(target);
         source = Utils.cloneObject(source);
 
-        for (var name in source) {
+        for (const name in source) {
             target[name] = updateProp.call(Utils, target[name], source[name]);
         }
 
@@ -358,16 +359,14 @@ if (window.StyledElements == null) {
         return true;
     };
 
-    var isSubClass = function isSubClass(superClass, childClass) {
-        var c1, c2, found = false;
-
+    const isSubClass = function isSubClass(superClass, childClass) {
         if (typeof superClass !== 'function' || typeof childClass !== 'function') {
             return found;
         }
 
-        c1 = superClass.prototype;
-        c2 = childClass.prototype;
-
+        const c1 = superClass.prototype;
+        let c2 = childClass.prototype;
+        let found = false;
         while (!(found = (c1 === c2))) {
             c2 = Object.getPrototypeOf(c2);
 
@@ -379,11 +378,11 @@ if (window.StyledElements == null) {
         return found;
     };
 
-    var equalsClass = function equalsClass(target, source) {
+    const equalsClass = function equalsClass(target, source) {
         return target.constructor === source.constructor;
     };
 
-    var updateProp = function updateProp(targetValue, sourceValue) {
+    const updateProp = function updateProp(targetValue, sourceValue) {
         if (sourceValue == null) {
             if (targetValue == null) {
                 targetValue = null;
@@ -424,7 +423,7 @@ if (window.StyledElements == null) {
      *
      * @example
      *
-     * var Person = function Person(name) {
+     * const Person = function Person(name) {
      *     this.name = name;
      * };
      *
@@ -432,13 +431,13 @@ if (window.StyledElements == null) {
      *     return "This is " + this.name;
      * };
      *
-     * var Student = function Student(name) {
+     * const Student = function Student(name) {
      *     Person.call(this, name);
      * };
      *
      * inherit(Student, Person);
      *
-     * var Teacher = function Teacher(name, subject) {
+     * const Teacher = function Teacher(name, subject) {
      *     Person.call(this, name);
      *     this.subject = subject;
      * };
@@ -449,7 +448,7 @@ if (window.StyledElements == null) {
      *     }
      * });
      *
-     * var peter = new Student("Peter");
+     * const peter = new Student("Peter");
      *
      * peter instanceOf Student
      * => true
@@ -460,7 +459,7 @@ if (window.StyledElements == null) {
      * "Who are you? " + peter
      * => "Who are you? This is Peter"
      *
-     * var john = new Teacher("John");
+     * const john = new Teacher("John");
      *
      * john instanceOf Teacher
      * => true
@@ -503,7 +502,7 @@ if (window.StyledElements == null) {
         return text.charAt(0).toUpperCase() + text.substring(1);
     };
 
-    var SIZE_UNITS = ['bytes', 'KiB', 'MiB', 'GiB', 'TiB'];
+    const SIZE_UNITS = ['bytes', 'KiB', 'MiB', 'GiB', 'TiB'];
     Object.freeze(SIZE_UNITS);
 
     Utils.formatSize = function formatSize(size) {
@@ -511,7 +510,8 @@ if (window.StyledElements == null) {
             return Utils.gettext('N/A');
         }
 
-        for (var i = 0; i < SIZE_UNITS.length; i++) {
+        let i;
+        for (i = 0; i < SIZE_UNITS.length; i++) {
             if (size < 1024) {
                 break;
             }
@@ -519,14 +519,14 @@ if (window.StyledElements == null) {
         }
 
         size = Math.round(size * 100) / 100;
-        return size + ' ' + SIZE_UNITS[i];
+        return size + " " + SIZE_UNITS[i];
     };
 
     // =========================================================================
     // Event helpers
     // =========================================================================
 
-    var keyCodeMap = {
+    const keyCodeMap = {
         8: 'Backspace',
         9: 'Tab',
         13: 'Enter',
@@ -565,7 +565,7 @@ if (window.StyledElements == null) {
         90: 'z'
     };
 
-    var keyFixes = {
+    const keyFixes = {
         'Left': 'ArrowLeft',
         'Right': 'ArrowRight',
         'Up': 'ArrowUp',
@@ -591,7 +591,7 @@ if (window.StyledElements == null) {
         };
     };
 
-    var propagate_keys = ['Escape', 'Enter'];
+    const propagate_keys = ['Escape', 'Enter'];
 
     /**
      * Stops the propagation of keydown events based on a common rules.
@@ -605,10 +605,8 @@ if (window.StyledElements == null) {
      * @param {KeyboardEvent} event keyboard event
      */
     Utils.stopInputKeydownPropagationListener = function stopInputKeydownPropagationListener(event) {
-        var modifiers, key;
-
-        modifiers = Utils.extractModifiers(event);
-        key = Utils.normalizeKey(event);
+        const modifiers = Utils.extractModifiers(event);
+        const key = Utils.normalizeKey(event);
 
         if ((!modifiers.altKey && !modifiers.metaKey && !modifiers.ctrlKey && propagate_keys.indexOf(key) === -1) || key === 'Backspace') {
             event.stopPropagation();
@@ -625,9 +623,7 @@ if (window.StyledElements == null) {
      * @returns {String} normalized key identifier
      */
     Utils.normalizeKey = function normalizeKey(event) {
-        var key;
-
-        key = event.key;
+        let key = event.key;
         if (event.altKey === false && key) {
             if (key in keyFixes) {
                 key = keyFixes[key];
@@ -667,8 +663,8 @@ if (window.StyledElements == null) {
      *     The new elements that were inserted.
      */
     Utils.appendChild = function appendChild(parentElement, newElement, refElement) {
-        var parentNode = getNode(parentElement);
-        var refNode = getLastNode(refElement);
+        const parentNode = getNode(parentElement);
+        let refNode = getLastNode(refElement);
 
         if (refNode != null) {
             refNode = refNode.nextSibling;
@@ -707,8 +703,8 @@ if (window.StyledElements == null) {
      *     The new elements that were inserted.
      */
     Utils.prependChild = function prependChild(parentElement, newElement, refElement) {
-        var parentNode = getNode(parentElement);
-        var refNode = getFirstNode(refElement);
+        const  parentNode = getNode(parentElement);
+        const refNode = getFirstNode(refElement);
 
         if (typeof newElement === 'string') {
             newElement = document.createTextNode(newElement);
@@ -744,11 +740,11 @@ if (window.StyledElements == null) {
         }
     };
 
-    var getNode = function getNode(value) {
+    const getNode = function getNode(value) {
         return value instanceof StyledElements.StyledElement ? value.get() : value;
     };
 
-    var getFirstNode = function getFirstNode(value) {
+    const getFirstNode = function getFirstNode(value) {
         if (value instanceof StyledElements.Fragment) {
             return value.elements[0];
         } else {
@@ -756,7 +752,7 @@ if (window.StyledElements == null) {
         }
     };
 
-    var getLastNode = function getLastNode(value) {
+    const getLastNode = function getLastNode(value) {
         if (value instanceof StyledElements.Fragment) {
             return value.elements[value.elements.length - 1];
         } else {
@@ -764,7 +760,7 @@ if (window.StyledElements == null) {
         }
     };
 
-    var getNodes = function getNodes(value) {
+    const getNodes = function getNodes(value) {
         return (value instanceof StyledElements.StyledElement && value.get() == null) ? value.children : [value];
     };
 
@@ -814,6 +810,8 @@ if (window.StyledElements == null) {
      * property assignments of previous sources.
      *
      * @memberof StyledElements.Utils
+     * @deprecated since version 0.11.0
+     * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign | Object.assign} as replacement
      * @since 0.5
      *
      * @param {Object} object The destination object.
@@ -822,13 +820,13 @@ if (window.StyledElements == null) {
      *
      * @example
      *
-     * var defaults = {
+     * const defaults = {
      *   depth: 0,
      *   state: "default",
      *   events: ["click", "focus"]
      * };
      *
-     * var options = {
+     * const options = {
      *   state: "primary",
      *   events: ["mouseover"]
      * };
@@ -845,22 +843,7 @@ if (window.StyledElements == null) {
      * defaults;
      * => {depth: 0, state: "primary", events: ["mouseover"]}
      */
-    Utils.merge = function merge(object) {
-
-        if (object == null || typeof object !== "object") {
-            throw new TypeError("object argument must be an object");
-        }
-
-        Array.prototype.slice.call(arguments, 1).forEach(function (source) {
-            if (source != null) {
-                Object.keys(source).forEach(function (key) {
-                    object[key] = source[key];
-                });
-            }
-        });
-
-        return object;
-    };
+    Utils.merge = Object.assign;
 
     /**
      * Updates existing properties using the values obtained from a list of
@@ -878,13 +861,13 @@ if (window.StyledElements == null) {
      *
      * @example
      *
-     * var defaults = {
+     * const defaults = {
      *   depth: 0,
      *   state: "default",
      *   events: ["click", "focus"]
      * };
      *
-     * var options = {
+     * const options = {
      *   state: "primary",
      *   other: "ignored value"
      * };
@@ -935,13 +918,60 @@ if (window.StyledElements == null) {
      * => [1, 2, 3]
      */
     Utils.values = function values(object) {
-        var values = [];
+        const values = [];
 
-        for (var key in object) {
+        for (const key in object) {
             values.push(object[key]);
         }
 
         return values;
+    };
+
+    /**
+     * Updates a set by adding all the elements of another set.
+     *
+     * @since 0.11.0
+     */
+    Utils.setupdate = function setupdate(setA, setB) {
+        for (const elem of setB) {
+            setA.add(elem);
+        }
+        return setA;
+    };
+
+    /**
+     * Creates a new promise that will reject if the original promise does not
+     * resolve or reject in a specific period of time. It is also possible to
+     * use this method to fullfil with a default value if the fallback
+     * parameter is passed.
+     *
+     * @param {Promise} promise original Promise
+     * @param {Number} ms time to wait until the promise should be rejected or
+     *        resolved
+     * @param {*} [fallback] if provided, the created promise will resolve
+     *        instead of being rejected. fallback value will be used as Promise
+     *        value.
+     *
+     * @returns {Promise}
+     */
+    Utils.timeoutPromise = function timeoutPromise(promise, ms, fallback) {
+        // Create a promise that resolves/rejects in <ms> milliseconds
+        const timeout = new Promise((resolve, reject) => {
+            const id = setTimeout(() => {
+                clearTimeout(id);
+                if (fallback != null) {
+                    resolve(fallback);
+                } else {
+                    reject('Timed out in ' + ms + 'ms.')
+                }
+            }, ms);
+        });
+
+        // Returns a race between our timeout and the passed in promise
+        return Promise.race([
+            promise,
+            timeout
+        ]);
     };
 
     Utils.waitTransition = function waitTransition(element) {
@@ -950,10 +980,10 @@ if (window.StyledElements == null) {
                 fulfill();
             }
 
-            let w = element.ownerDocument.defaultView;
-            let display = w.getComputedStyle(element, null).getPropertyValue("display");
+            const w = element.ownerDocument.defaultView;
+            const display = w.getComputedStyle(element, null).getPropertyValue("display");
             if (display !== "none") {
-                let listener = function listener(event) {
+                const listener = function listener(event) {
                     element.removeEventListener('transitionend', listener);
                     fulfill();
                 };
@@ -963,6 +993,18 @@ if (window.StyledElements == null) {
                 fulfill();
             }
         });
+    };
+
+    /**
+     * Removes an element from an array.
+     *
+     * @since 0.11.0
+     */
+    Utils.removeFromArray = function removeFromArray(arr, element) {
+        const index = arr.indexOf(element);
+        if (index !== -1) {
+            arr.splice(index, 1);
+        }
     };
 
     StyledElements.Utils = Utils;

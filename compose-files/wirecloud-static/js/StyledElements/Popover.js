@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2014-2016 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2019-2021 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -22,14 +23,41 @@
 /* globals StyledElements, Wirecloud */
 
 
-(function (utils) {
+(function (se, utils) {
 
     "use strict";
 
-    var builder = new StyledElements.GUIBuilder();
-    var template = '<s:styledgui xmlns:s="http://wirecloud.conwet.fi.upm.es/StyledElements" xmlns:t="http://wirecloud.conwet.fi.upm.es/Template" xmlns="http://www.w3.org/1999/xhtml"><div class="popover fade"><div class="arrow"/><h3 class="popover-title"><t:title/></h3><div class="popover-content"><t:content/></div></div></s:styledgui>';
+    const privates = new WeakMap();
+    const builder = new StyledElements.GUIBuilder();
+    const template = '<s:styledgui xmlns:s="http://wirecloud.conwet.fi.upm.es/StyledElements" xmlns:t="http://wirecloud.conwet.fi.upm.es/Template" xmlns="http://www.w3.org/1999/xhtml"><div class="popover fade"><div class="arrow"/><h3 class="popover-title"><t:title/></h3><div class="popover-content"><t:content/></div></div></s:styledgui>';
 
-    var disableCallback = function disableCallback(e) {
+    const update_popover_visibility = function update_popover_visibility(changes) {
+        if ("visible" in changes) {
+            privates.get(this).element.classList.toggle("hidden", !changes.visible);
+        }
+    };
+
+    const on_widget_unload = function on_widget_unload(popover, widget) {
+        popover.hide();
+    };
+
+    const track_element = function track_element(widget, popover) {
+        const priv = privates.get(popover);
+        priv.update_popover_visibility_bound = update_popover_visibility.bind(popover);
+        widget.contextManager.addCallback(priv.update_popover_visibility_bound);
+        priv.on_widget_unload = on_widget_unload.bind(null, popover);
+        widget.addEventListener("unload", priv.on_widget_unload);
+    };
+
+    const untrack_element = function untrack_element(widget, popover) {
+        const priv = privates.get(popover);
+        widget.contextManager.removeCallback(priv.update_popover_visibility_bound);
+        widget.removeEventListener("unload", priv.on_widget_unload);
+        delete priv.update_popover_visibility_bound;
+        delete priv.on_widget_unload;
+    };
+
+    const disableCallback = function disableCallback(e) {
 
         if (e.button !== 0) {
             return;
@@ -38,192 +66,298 @@
         setTimeout(this.hide.bind(this), 0);
     };
 
-    var setPosition = function setPosition(refPosition, position) {
-        this.element.classList.remove('top', 'right', 'bottom', 'left');
+    const setPosition = function setPosition(element, refPosition, position) {
+        element.classList.remove('top', 'right', 'bottom', 'left');
+        element.style.top = "";
+        element.style.left = "";
+        element.style.bottom = "";
+        element.style.right = "";
 
+        element.classList.add(position);
         switch (position) {
         case 'top':
-            this.element.classList.add('top');
-            this.element.style.left = (refPosition.left + (refPosition.width - this.element.offsetWidth) / 2) + "px";
-            this.element.style.top = (refPosition.top - this.element.offsetHeight) + "px";
+            element.style.left = (refPosition.left + (refPosition.width - element.offsetWidth) / 2) + "px";
+            element.style.top = (refPosition.top - element.offsetHeight) + "px";
             break;
         case 'right':
-            this.element.classList.add('right');
-            this.element.style.left = refPosition.right + "px";
-            this.element.style.top = (refPosition.top + (refPosition.height - this.element.offsetHeight) / 2) + "px";
+            element.style.left = refPosition.right + "px";
+            element.style.top = (refPosition.top + (refPosition.height - element.offsetHeight) / 2) + "px";
             break;
         case 'bottom':
-            this.element.classList.add('bottom');
-            this.element.style.left = (refPosition.left + (refPosition.width - this.element.offsetWidth) / 2) + "px";
-            this.element.style.top = refPosition.bottom + "px";
+            element.style.left = (refPosition.left + (refPosition.width - element.offsetWidth) / 2) + "px";
+            element.style.top = refPosition.bottom + "px";
             break;
         case 'left':
-            this.element.classList.add('left');
-            this.element.style.left = (refPosition.left - this.element.offsetWidth) + "px";
-            this.element.style.top = (refPosition.top + (refPosition.height - this.element.offsetHeight) / 2) + "px";
+            element.style.left = (refPosition.left - element.offsetWidth) + "px";
+            element.style.top = (refPosition.top + (refPosition.height - element.offsetHeight) / 2) + "px";
             break;
         }
     };
 
-    var standsOut = function standsOut() {
-        var parent_box = this.element.parentElement.getBoundingClientRect();
-        var element_box = this.element.getBoundingClientRect();
+    const standsOut = function standsOut(element) {
+        const parent_box = element.parentElement.getBoundingClientRect();
+        const element_box = element.getBoundingClientRect();
 
-        var visible_width = element_box.width - Math.max(element_box.right - parent_box.right, 0) - Math.max(parent_box.left - element_box.left, 0);
-        var visible_height = element_box.height - Math.max(element_box.bottom - parent_box.bottom, 0) - Math.max(parent_box.top - element_box.top, 0);
-        var element_area = element_box.width * element_box.height;
-        var visible_area = visible_width * visible_height;
+        const visible_width = element_box.width - Math.max(element_box.right - parent_box.right, 0) - Math.max(parent_box.left - element_box.left, 0);
+        const visible_height = element_box.height - Math.max(element_box.bottom - parent_box.bottom, 0) - Math.max(parent_box.top - element_box.top, 0);
+        const element_area = element_box.width * element_box.height;
+        const visible_area = visible_width * visible_height;
         return element_area - visible_area;
     };
 
-    var fixPosition = function fixPosition(refPosition, weights, positions) {
-        var best_weight = Math.min.apply(Math, weights);
-        var index = weights.indexOf(best_weight);
-        var position = positions[index];
-
-        setPosition.call(this, refPosition, position);
-
-        var parent_box = this.element.parentElement.getBoundingClientRect();
-        var element_box = this.element.getBoundingClientRect();
-
-        if (element_box.bottom > parent_box.bottom) {
-            this.element.style.top = "";
-            this.element.style.bottom = "10px";
-            element_box = this.element.getBoundingClientRect();
-        }
-
-        if (element_box.top < parent_box.top) {
-            this.element.style.top = "10px";
-        }
+    const FIX_PLANS = {
+        "bottom": ["left", "right", "top", "bottom"],
+        "left": ["right", "top", "bottom", "left"],
+        "right": ["left", "top", "bottom", "right"],
+        "top": ["left", "right", "bottom", "top"]
     };
 
-    var searchBestPosition = function searchBestPosition(refPosition, positions) {
-        var i = 0, weights = [];
+    const fixPosition = function fixPosition(element, refPosition, weights, positions) {
+        // Search which position has less area outside the window
+        const best_weight = Math.min.apply(Math, weights);
+        const index = weights.indexOf(best_weight);
+        const position = positions[index];
 
+        // And use it as the starting point
+        setPosition(element, refPosition, position);
+
+        // Reduce popover size to enter on the current window
+        const parent_box = element.parentElement.getBoundingClientRect();
+        let element_box = element.getBoundingClientRect();
+
+        const plan = FIX_PLANS[position];
+        plan.forEach((placement) => {
+            if (
+                (placement === "top" || placement === "left") && element_box[placement] < parent_box[placement]
+                || (placement === "bottom" || placement === "right") && element_box[placement] > parent_box[placement]
+            ) {
+                element.style[placement] = "10px";
+                element_box = element.getBoundingClientRect();
+            }
+        });
+    };
+
+    const searchBestPosition = function searchBestPosition(refPosition, positions) {
+        const priv = privates.get(this);
+        const weights = [];
+
+        if ('getBoundingClientRect' in refPosition) {
+            refPosition = refPosition.getBoundingClientRect();
+        }
+
+        let i = 0;
         do {
-            setPosition.call(this, refPosition, positions[i]);
-            weights.push(standsOut.call(this));
+            setPosition(priv.element, refPosition, positions[i]);
+            weights.push(standsOut(priv.element));
             i += 1;
         } while (weights[i - 1] > 0 && i < positions.length);
 
         if (weights[i - 1] > 0) {
-            fixPosition.call(this, refPosition, weights, positions);
+            fixPosition(priv.element, refPosition, weights, positions);
         }
     };
 
-    var _show = function _show(refPosition) {
+    const _show = function _show(refPosition) {
+        const priv = privates.get(this);
 
         if ('Wirecloud' in window) {
             Wirecloud.UserInterfaceManager._registerPopup(this);
         }
 
         if (this.visible) {
-            this.element.classList.add('in');
-            this.repaint();
-            return;
+            priv.element.classList.add('in');
+            return this.repaint();
         }
 
-        if ('getBoundingClientRect' in refPosition) {
-            refPosition = refPosition.getBoundingClientRect();
-        }
-
-        this.element = builder.parse(template, {
+        priv.element = builder.parse(template, {
             title: this.options.title,
             content: this.options.content
         }).elements[0];
-        this.element.addEventListener('transitionend', _hide.bind(this));
+        priv.element.addEventListener('transitionend', _hide.bind(this));
 
-        var baseelement = utils.getFullscreenElement() || document.body;
-        baseelement.appendChild(this.element);
-        baseelement.addEventListener("click", this._disableCallback, true);
+        priv.baseelement = utils.getFullscreenElement() || document.body;
+        priv.baseelement.appendChild(priv.element);
+        utils.onFullscreenChange(document.body, priv.on_fullscreen_change);
+        if (priv.refContainer != null) {
+            track_element(priv.refContainer, this);
+        }
 
-        searchBestPosition.call(this, refPosition, this.options.placement);
-        this.element.classList.add('in');
+        priv.element.classList.toggle("sticky", this.options.sticky);
+        if (!this.options.sticky) {
+            priv.baseelement.ownerDocument.addEventListener("click", priv.disableCallback, true);
+        }
+
+        priv.refPosition = refPosition;
+        searchBestPosition.call(this, priv.refPosition, this.options.placement);
+        priv.element.classList.add('in');
         this.dispatchEvent('show');
 
         return this;
     };
 
-    var Popover = function Popover(options) {
-        var defaultOptions = {
-            'content': '',
-            'title': '',
-            'class': '',
-            'html': false,
-            'placement': ['right', 'bottom', 'left', 'top']
-        };
-        Object.defineProperty(this, 'options', {value: utils.merge(defaultOptions, options)});
-
-        StyledElements.StyledElement.call(this, []);
-
-        Object.defineProperties(this, {
-            element: {value: null, writable: true},
-            visible: {
-                get: function () {
-                    return this.element != null;
-                }
-            },
-            _disableCallback: {value: disableCallback.bind(this), enumerable: false}
-        });
-    };
-    utils.inherit(Popover, StyledElements.StyledElement);
-
-    Popover.prototype.bind = function bind(element, mode) {
-        switch (mode) {
-        case "click":
-            element.addEventListener('click', this.toggle.bind(this), true);
-            break;
-        case "hover":
-            element.addEventListener('focus', this.show.bind(this, element), false);
-            element.addEventListener('blur', this.hide.bind(this), false);
-            element.addEventListener('mouseenter', this.show.bind(this, element), true);
-            element.addEventListener('mouseleave', this.hide.bind(this), true);
-            element.addEventListener('click', this.show.bind(this, element), false);
-            break;
-        default:
-            throw new TypeError('Invalid mode: ' + mode);
-        }
-    };
-
-    Popover.prototype.toggle = function toggle(refElement) {
-        if (this.visible) {
-            return this.hide();
-        } else {
-            return _show.call(this, refElement);
-        }
-    };
-
-    Popover.prototype.show = function show(refElement) {
-        return _show.call(this, refElement);
-    };
-
-    var _hide = function _hide() {
-        if (this.element != null && !this.element.classList.contains('in')) {
-            this.element.remove();
-            this.element = null;
+    const _hide = function _hide() {
+        const priv = privates.get(this);
+        if (priv.element != null && !priv.element.classList.contains('in')) {
+            utils.removeFullscreenChangeCallback(document.body, priv.on_fullscreen_change);
+            priv.element.remove();
+            priv.element = null;
+            priv.refPosition = null;
+            if (priv.refContainer != null) {
+                untrack_element(priv.refContainer, this);
+            }
             if ('Wirecloud' in window) {
                 Wirecloud.UserInterfaceManager._unregisterPopup(this);
             }
-            document.removeEventListener('click', this._disableCallback, true);
+            if (!this.options.sticky) {
+                priv.baseelement.ownerDocument.removeEventListener('click', priv.disableCallback, true);
+            }
             this.dispatchEvent('hide');
         }
     };
 
-    Popover.prototype.hide = function hide() {
-        var force;
-        if (!this.visible) {
+
+    se.Popover = class Popover extends se.StyledElement {
+
+        /**
+         * @param {Object} [options] a dictionary with popover options
+         * @param {Wirecloud.ui.WidgetView} [options.refContainer] Widget
+         *   associated with this popover. Visibility of the popover with be
+         *   controlled also with the visibility of the widget. This is a
+         *   WireCloud related feature.
+         * @param {boolean} [options.sticky] If `true`, the popover won't be
+         *   closed when clicking on the document.
+         */
+        constructor(options) {
+            const defaultOptions = {
+                refContainer: null,
+                content: "",
+                title: "",
+                class: "",
+                html: false,
+                placement: ["right", "bottom", "left", "top"],
+                sticky: false
+            };
+
+            super([]);
+            Object.defineProperty(this, 'options', {value: utils.merge(defaultOptions, options)});
+
+            const priv = {
+                element: null,
+                disableCallback: disableCallback.bind(this),
+                refContainer: this.options.refContainer,
+                on_fullscreen_change: (event) => {
+                    priv.baseelement = utils.getFullscreenElement() || document.body;
+                    priv.baseelement.appendChild(priv.element);
+                    this.repaint();
+                }
+            };
+            privates.set(this, priv);
+
+            delete this.options.refContainer;
+        }
+
+        get visible() {
+            return privates.get(this).element != null;
+        }
+
+        bind(element, mode) {
+            switch (mode) {
+            case "click":
+                element.addEventListener('click', this.toggle.bind(this), true);
+                break;
+            case "hover":
+                element.addEventListener('focus', this.show.bind(this, element), false);
+                element.addEventListener('blur', this.hide.bind(this), false);
+                element.addEventListener('mouseenter', this.show.bind(this, element), true);
+                element.addEventListener('mouseleave', this.hide.bind(this), true);
+                element.addEventListener('click', this.show.bind(this, element), false);
+                break;
+            default:
+                throw new TypeError('Invalid mode: ' + mode);
+            }
+
             return this;
         }
 
-        force = !this.element.classList.contains('in') || getComputedStyle(this.element).getPropertyValue('opacity') === "0";
-        this.element.classList.remove('in');
-        if (force) {
-            _hide.call(this);
+        disablePointerEvents() {
+            const priv = privates.get(this);
+
+            if (priv.element) {
+                priv.element.style.pointerEvents = "none";
+            }
+
+            return this;
         }
 
-        return this;
-    };
+        enablePointerEvents() {
+            const priv = privates.get(this);
 
-    StyledElements.Popover = Popover;
+            if (priv.element) {
+                priv.element.style.pointerEvents = "";
+            }
 
-})(StyledElements.Utils);
+            return this;
+        }
+
+        toggle(refElement) {
+            if (this.visible) {
+                return this.hide();
+            } else {
+                return this.show(refElement);
+            }
+        }
+
+        repaint() {
+            const priv = privates.get(this);
+
+            if (priv.refPosition) {
+                searchBestPosition.call(this, priv.refPosition, this.options.placement);
+            }
+
+            return this;
+        }
+
+        show(refElement) {
+            return _show.call(this, refElement);
+        }
+
+        update(title, content) {
+            this.options.title = title;
+            this.options.content = content;
+
+            const priv = privates.get(this);
+            if (priv.element) {
+                priv.element.remove();
+
+                priv.element = builder.parse(template, {
+                    title: this.options.title,
+                    content: this.options.content
+                }).elements[0];
+                priv.element.addEventListener("transitionend", _hide.bind(this));
+                priv.element.classList.toggle("sticky", this.options.sticky);
+                priv.element.classList.add("in");
+                priv.baseelement.appendChild(priv.element);
+
+                this.repaint();
+            }
+            return this;
+        }
+
+        hide() {
+            if (!this.visible) {
+                return this;
+            }
+
+            const priv = privates.get(this);
+            const force = !priv.element.classList.contains('in') || getComputedStyle(priv.element).getPropertyValue('opacity') === "0";
+            priv.element.classList.remove('in');
+            if (force) {
+                _hide.call(this);
+            }
+
+            return this;
+        }
+
+    }
+
+})(StyledElements, StyledElements.Utils);

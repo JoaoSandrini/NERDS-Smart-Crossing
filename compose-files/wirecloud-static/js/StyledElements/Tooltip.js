@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2014-2016 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2019-2020 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -22,187 +23,202 @@
 /* globals StyledElements, Wirecloud */
 
 
-(function (utils) {
+(function (se, utils) {
 
     "use strict";
 
-    var builder = new StyledElements.GUIBuilder();
-    var template = '<s:styledgui xmlns:s="http://wirecloud.conwet.fi.upm.es/StyledElements" xmlns:t="http://wirecloud.conwet.fi.upm.es/Template" xmlns="http://www.w3.org/1999/xhtml"><div class="tooltip fade" role="tooltip"><div class="tooltip-arrow"></div><div class="tooltip-inner"><t:content/></div></div></s:styledgui>';
+    const privates = new WeakMap();
+    const builder = new se.GUIBuilder();
+    const template = '<s:styledgui xmlns:s="http://wirecloud.conwet.fi.upm.es/StyledElements" xmlns:t="http://wirecloud.conwet.fi.upm.es/Template" xmlns="http://www.w3.org/1999/xhtml"><div class="se-tooltip fade" role="tooltip"><div class="se-tooltip-arrow"></div><div class="se-tooltip-inner"><t:content/></div></div></s:styledgui>';
 
-    var setPosition = function setPosition(refPosition, position) {
-        this.element.classList.remove('top', 'right', 'bottom', 'left');
+    const setPosition = function setPosition(element, refPosition, position) {
+        element.classList.remove('se-tooltip-top', 'se-tooltip-right', 'se-tooltip-bottom', 'se-tooltip-left');
 
         switch (position) {
         case 'top':
-            this.element.classList.add('top');
-            this.element.style.left = (refPosition.left + (refPosition.width - this.element.offsetWidth) / 2) + "px";
-            this.element.style.top = (refPosition.top - this.element.offsetHeight) + "px";
+            element.classList.add('se-tooltip-top');
+            element.style.left = (refPosition.left + (refPosition.width - element.offsetWidth) / 2) + "px";
+            element.style.top = (refPosition.top - element.offsetHeight) + "px";
             break;
         case 'right':
-            this.element.classList.add('right');
-            this.element.style.left = refPosition.right + "px";
-            this.element.style.top = (refPosition.top + (refPosition.height - this.element.offsetHeight) / 2) + "px";
+            element.classList.add('se-tooltip-right');
+            element.style.left = refPosition.right + "px";
+            element.style.top = (refPosition.top + (refPosition.height - element.offsetHeight) / 2) + "px";
             break;
         case 'bottom':
-            this.element.classList.add('bottom');
-            this.element.style.left = (refPosition.left + (refPosition.width - this.element.offsetWidth) / 2) + "px";
-            this.element.style.top = refPosition.bottom + "px";
+            element.classList.add('se-tooltip-bottom');
+            element.style.left = (refPosition.left + (refPosition.width - element.offsetWidth) / 2) + "px";
+            element.style.top = refPosition.bottom + "px";
             break;
         case 'left':
-            this.element.classList.add('left');
-            this.element.style.left = (refPosition.left - this.element.offsetWidth) + "px";
-            this.element.style.top = (refPosition.top + (refPosition.height - this.element.offsetHeight) / 2) + "px";
+            element.classList.add('se-tooltip-left');
+            element.style.left = (refPosition.left - element.offsetWidth) + "px";
+            element.style.top = (refPosition.top + (refPosition.height - element.offsetHeight) / 2) + "px";
             break;
         }
     };
 
-    var standsOut = function standsOut() {
-        var parent_box = this.element.parentElement.getBoundingClientRect();
-        var element_box = this.element.getBoundingClientRect();
+    const standsOut = function standsOut(element) {
+        const parent_box = element.parentElement.getBoundingClientRect();
+        const element_box = element.getBoundingClientRect();
 
-        var visible_width = element_box.width - Math.max(element_box.right - parent_box.right, 0) - Math.max(parent_box.left - element_box.left, 0);
-        var visible_height = element_box.height - Math.max(element_box.bottom - parent_box.bottom, 0) - Math.max(parent_box.top - element_box.top, 0);
-        var element_area = element_box.width * element_box.height;
-        var visible_area = visible_width * visible_height;
+        const visible_width = element_box.width - Math.max(element_box.right - parent_box.right, 0) - Math.max(parent_box.left - element_box.left, 0);
+        const visible_height = element_box.height - Math.max(element_box.bottom - parent_box.bottom, 0) - Math.max(parent_box.top - element_box.top, 0);
+        const element_area = element_box.width * element_box.height;
+        const visible_area = visible_width * visible_height;
         return element_area - visible_area;
     };
 
-    var fixPosition = function fixPosition(refPosition, weights, positions) {
-        var best_weight = Math.min.apply(Math, weights);
-        var index = weights.indexOf(best_weight);
-        var position = positions[index];
-
-        setPosition.call(this, refPosition, position);
-
-        var parent_box = this.element.parentElement.getBoundingClientRect();
-        var element_box = this.element.getBoundingClientRect();
-
-        if (element_box.bottom > parent_box.bottom) {
-            this.element.style.top = "";
-            this.element.style.bottom = "10px";
-            element_box = this.element.getBoundingClientRect();
-        }
-
-        if (element_box.top < parent_box.top) {
-            this.element.style.top = "10px";
-        }
+    const FIX_PLANS = {
+        "bottom": ["left", "right", "top", "bottom"],
+        "left": ["right", "top", "bottom", "left"],
+        "right": ["left", "top", "bottom", "right"],
+        "top": ["left", "right", "bottom", "top"]
     };
 
-    var searchBestPosition = function searchBestPosition(refPosition, positions) {
-        var i = 0, weights = [];
+    const fixPosition = function fixPosition(element, refPosition, weights, positions) {
+        // Search which position has less area outside the window
+        const best_weight = Math.min.apply(Math, weights);
+        const index = weights.indexOf(best_weight);
+        const position = positions[index];
 
-        do {
-            setPosition.call(this, refPosition, positions[i]);
-            weights.push(standsOut.call(this));
-            i += 1;
-        } while (weights[i - 1] > 0 && i < positions.length);
+        // And use it as the starting point
+        setPosition(element, refPosition, position);
 
-        if (weights[i - 1] > 0) {
-            fixPosition.call(this, refPosition, weights, positions);
-        }
+        // Reduce tooltip size to enter on the current window
+        const parent_box = element.parentElement.getBoundingClientRect();
+        let element_box = element.getBoundingClientRect();
+
+        const plan = FIX_PLANS[position];
+        plan.forEach((placement) => {
+            if (
+                (placement === "top" || placement === "left") && element_box[placement] < parent_box[placement]
+                || (placement === "bottom" || placement === "right") && element_box[placement] > parent_box[placement]
+            ) {
+                element.style[placement] = "10px";
+                element_box = element.getBoundingClientRect();
+            }
+        });
     };
 
-    var _show = function _show(refPosition) {
-
-        if ('Wirecloud' in window) {
-            Wirecloud.UserInterfaceManager._registerTooltip(this);
-        }
-
-        if (this.visible) {
-            this.element.classList.add('in');
-            this.repaint();
-            return;
-        }
+    const searchBestPosition = function searchBestPosition(refPosition, positions) {
+        const priv = privates.get(this);
+        const weights = [];
+        let i = 0;
 
         if ('getBoundingClientRect' in refPosition) {
             refPosition = refPosition.getBoundingClientRect();
         }
 
-        this.element = builder.parse(template, {
-            content: this.options.content
-        }).elements[0];
-        this.element.addEventListener('transitionend', _hide.bind(this));
+        do {
+            setPosition(priv.element, refPosition, positions[i]);
+            weights.push(standsOut(priv.element));
+            i += 1;
+        } while (weights[i - 1] > 0 && i < positions.length);
 
-        var baseelement = utils.getFullscreenElement() || document.body;
-        baseelement.appendChild(this.element);
-
-        searchBestPosition.call(this, refPosition, this.options.placement);
-        this.element.classList.add('in');
-
-        return this;
-    };
-
-    var Tooltip = function Tooltip(options) {
-        var defaultOptions = {
-            'content': '',
-            'class': '',
-            'placement': ['right', 'bottom', 'left', 'top']
-        };
-        Object.defineProperty(this, 'options', {value: utils.merge(defaultOptions, options)});
-
-        StyledElements.StyledElement.call(this, []);
-
-        Object.defineProperties(this, {
-            element: {value: null, writable: true},
-            visible: {
-                get: function () {
-                    return this.element != null;
-                }
-            }
-        });
-    };
-    utils.inherit(Tooltip, StyledElements.StyledElement);
-
-    Tooltip.prototype.destroy = function destroy() {
-        this.hide();
-    };
-
-    Tooltip.prototype.bind = function bind(element) {
-        element.addEventListener('focus', this.show.bind(this, element), false);
-        element.addEventListener('blur', this.hide.bind(this), false);
-        element.addEventListener('mouseenter', this.show.bind(this, element), false);
-        element.addEventListener('mouseleave', this.hide.bind(this), false);
-        element.addEventListener('click', this.hide.bind(this), false);
-    };
-
-    Tooltip.prototype.toggle = function toggle(refElement) {
-        if (this.visible) {
-            return this.hide();
-        } else {
-            return _show.call(this, refElement);
+        if (weights[i - 1] > 0) {
+            fixPosition(priv.element, refPosition, weights, positions);
         }
     };
 
-    Tooltip.prototype.show = function show(refElement) {
-        return _show.call(this, refElement);
-    };
-
-    var _hide = function _hide() {
-        if (this.element != null && !this.element.classList.contains('in')) {
-            this.element.remove();
-            this.element = null;
+    const _hide = function _hide() {
+        const priv = privates.get(this);
+        if (priv.element != null && !priv.element.classList.contains('in')) {
+            priv.element.remove();
+            priv.element = null;
             if ('Wirecloud' in window) {
                 Wirecloud.UserInterfaceManager._unregisterTooltip(this);
             }
         }
     };
 
-    Tooltip.prototype.hide = function hide() {
-        var force;
+    se.Tooltip = class Tooltip extends se.StyledElement {
 
-        if (!this.visible) {
+        constructor(options) {
+            const defaultOptions = {
+                content: '',
+                class: '',
+                placement: ['right', 'bottom', 'left', 'top']
+            };
+
+            super([]);
+
+            const priv = {
+                element: null
+            };
+            privates.set(this, priv);
+            Object.defineProperties(this, {
+                options: {
+                    value: utils.merge(defaultOptions, options)
+                },
+                visible: {
+                    get: function () {
+                        return priv.element != null;
+                    }
+                }
+            });
+        }
+
+        destroy() {
+            this.hide();
+        }
+
+        bind(element) {
+            element.addEventListener('focus', this.show.bind(this, element), false);
+            element.addEventListener('blur', this.hide.bind(this), false);
+            element.addEventListener('mouseenter', this.show.bind(this, element), false);
+            element.addEventListener('mouseleave', this.hide.bind(this), false);
+            element.addEventListener('click', this.hide.bind(this), false);
+        }
+
+        toggle(refElement) {
+            if (this.visible) {
+                return this.hide();
+            } else {
+                return this.show(refElement);
+            }
+        }
+
+        show(refPosition) {
+            const priv = privates.get(this);
+
+            if ('Wirecloud' in window) {
+                Wirecloud.UserInterfaceManager._registerTooltip(this);
+            }
+
+            if (this.visible) {
+                priv.element.classList.add('in');
+                return this.repaint();
+            }
+
+            priv.element = builder.parse(template, {
+                content: this.options.content
+            }).elements[0];
+            priv.element.addEventListener('transitionend', _hide.bind(this));
+
+            const baseelement = utils.getFullscreenElement() || document.body;
+            baseelement.appendChild(priv.element);
+
+            searchBestPosition.call(this, refPosition, this.options.placement);
+            priv.element.classList.add('in');
+
             return this;
         }
 
-        force = !this.element.classList.contains('in') || getComputedStyle(this.element).getPropertyValue('opacity') === "0";
-        this.element.classList.remove('in');
-        if (force) {
-            _hide.call(this);
+        hide() {
+            if (!this.visible) {
+                return this;
+            }
+
+            const priv = privates.get(this);
+            const force = !priv.element.classList.contains('in') || getComputedStyle(priv.element).getPropertyValue('opacity') === "0";
+            priv.element.classList.remove('in');
+            if (force) {
+                _hide.call(this);
+            }
+
+            return this;
         }
+    }
 
-        return this;
-    };
-
-    StyledElements.Tooltip = Tooltip;
-
-})(StyledElements.Utils);
+})(StyledElements, StyledElements.Utils);

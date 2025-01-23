@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2012-2017 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2021 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -29,7 +30,7 @@
     /**
      * @author aarranz
      */
-    var UserPrefDef = function UserPrefDef(options) {
+    const UserPrefDef = function UserPrefDef(options) {
 
         if (options == null || typeof options !== "object") {
             throw new TypeError('Invalid options parameter');
@@ -49,10 +50,12 @@
             label: {value: options.label},
             description: {value: options.description},
             required: {value: options.required},
-            options: {value: options.options}
+            secure: {value: options.secure},
+            options: {value: options.options},
+            language: {value: options.language}
         });
 
-        var default_value = '';
+        let default_value = '';
         if (options.type === 'boolean') {
             default_value = options.default.trim().toLowerCase() === 'true';
         } else if (options.type === 'number' && options.default != null) {

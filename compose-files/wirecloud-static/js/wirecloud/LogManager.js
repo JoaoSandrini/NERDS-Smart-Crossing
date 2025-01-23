@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2013-2017 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2020-2021 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -22,78 +23,116 @@
 /* globals console, StyledElements, Wirecloud */
 
 
-(function (se, utils) {
+(function (ns, se, utils) {
 
     "use strict";
 
-    // =========================================================================
-    // CLASS DEFINITION
-    // =========================================================================
+    const privates = new WeakMap();
 
-    /**
-     * Creates a new instance of class LogManager.
-     *
-     * @constructor
-     * @extends StyledElements.ObjectWithEvents
-     * @name Wirecloud.LogManager
-     * @since 0.5
-     * @param {Wirecloud.LogManager} [parent] parent log manager
-     */
-    var LogManager = function LogManager(parent) {
-        var entries = [];
-        var priv = {
-            closed: false,
-            entries: entries,
-            errorcount: 0,
-            previouscycles: [],
-            parent: null
-        };
+    const appendEntry = function appendEntry(entry) {
+        const priv = privates.get(this);
 
-        se.ObjectWithEvents.call(this, ["newentry"]);
+        if (entry.level === Wirecloud.constants.LOGGING.ERROR_MSG) {
+            priv.errorcount += 1;
+        }
+        priv.entries.unshift(entry);
+        this.dispatchEvent('newentry', entry);
 
-        privates.set(this, priv);
-
-        Object.defineProperties(this, {
-            closed: {
-                get: function () {
-                    return priv.closed;
-                }
-            },
-            entries: {
-                get: function () {
-                    return priv.entries.slice(0);
-                }
-            },
-            errorCount: {
-                get: function () {
-                    return priv.errorcount;
-                }
-            },
-            previouscycles: {
-                get: function () {
-                    return priv.previouscycles;
-                }
-            },
-            parent: {
-                get: function () {
-                    return priv.parent;
-                }
-            },
-            totalCount: {
-                get: function () {
-                    return priv.entries.length;
-                }
-            }
-        });
-
-        setParent.call(this, parent);
+        if (priv.parent) {
+            appendEntry.call(priv.parent, entry);
+        }
     };
 
-    // =========================================================================
-    // PUBLIC MEMBERS
-    // =========================================================================
+    const printEntry = function printEntry(entry) {
 
-    utils.inherit(LogManager, se.ObjectWithEvents, /** @lends Wirecloud.LogManager.prototype */  {
+        switch (entry.level) {
+        case Wirecloud.constants.LOGGING.ERROR_MSG:
+            // eslint-disable-next-line no-console
+            console.error(entry.msg);
+            break;
+        case Wirecloud.constants.LOGGING.WARN_MSG:
+            // eslint-disable-next-line no-console
+            console.warn(entry.msg);
+            break;
+        case Wirecloud.constants.LOGGING.DEBUG_MSG:
+        case Wirecloud.constants.LOGGING.INFO_MSG:
+            // eslint-disable-next-line no-console
+            console.info(entry.msg);
+            break;
+        }
+    };
+
+    const setParent = function setParent(parent) {
+        const priv = privates.get(this);
+
+        if (parent instanceof ns.LogManager) {
+            if (parent.closed) {
+                throw new Error();
+            }
+            priv.parent = parent;
+        }
+    };
+
+    ns.LogManager = class LogManager extends se.ObjectWithEvents {
+
+        /**
+         * Creates a new instance of class LogManager.
+         *
+         * @constructor
+         * @extends StyledElements.ObjectWithEvents
+         * @name Wirecloud.LogManager
+         * @since 0.5
+         * @param {Wirecloud.LogManager} [parent] parent log manager
+         */
+        constructor(parent) {
+            const entries = [];
+            const priv = {
+                closed: false,
+                entries: entries,
+                errorcount: 0,
+                previouscycles: [],
+                parent: null
+            };
+
+            super(["newentry"]);
+
+            privates.set(this, priv);
+
+            Object.defineProperties(this, {
+                closed: {
+                    get: function () {
+                        return priv.closed;
+                    }
+                },
+                entries: {
+                    get: function () {
+                        return priv.entries.slice(0);
+                    }
+                },
+                errorCount: {
+                    get: function () {
+                        return priv.errorcount;
+                    }
+                },
+                previouscycles: {
+                    get: function () {
+                        return priv.previouscycles;
+                    }
+                },
+                parent: {
+                    get: function () {
+                        return priv.parent;
+                    }
+                },
+                totalCount: {
+                    get: function () {
+                        return priv.entries.length;
+                    }
+                }
+            });
+
+            setParent.call(this, parent);
+        };
 
         /**
          * Marks this log manager as closed. Closed log managers are read only
@@ -102,10 +141,10 @@
          *
          * @returns {Wirecloud.LogManager}
          */
-        close: function close() {
+        close() {
             privates.get(this).closed = true;
             return this;
-        },
+        }
 
         /**
          * Formats an exceptions to be used as the details of a log entry.
@@ -113,14 +152,14 @@
          * @param {Error} exception exception to format
          * @returns {StyledElements.Fragment}
          */
-        formatException: function formatException(exception) {
-            var builder = new StyledElements.GUIBuilder();
+        formatException(exception) {
+            const builder = new StyledElements.GUIBuilder();
 
             return builder.parse(Wirecloud.currentTheme.templates['wirecloud/logs/details'], {
                 message: exception.toString(),
                 stacktrace: exception.stack
             });
-        },
+        }
 
         /**
          * Adds a log entry into this log manager.
@@ -129,9 +168,7 @@
          * @param {Object} [options]
          * @returns {Wirecloud.LogManager}
          */
-        log: function log(message, options) {
-            var entry;
-
+        log(message, options) {
             if (this.closed) {
                 throw new Error("Trying to log a message in a closed LogManager");
             }
@@ -152,7 +189,7 @@
                 throw new TypeError("Invalid level value");
             }
 
-            entry = Object.freeze({
+            const entry = Object.freeze({
                 date: new Date(),
                 details: options.details,
                 level: options.level,
@@ -166,7 +203,7 @@
             }
 
             return this;
-        },
+        }
 
         /**
          * Creates a new cycle moving the current entries into the
@@ -174,8 +211,8 @@
          *
          * @returns {Wirecloud.LogManager}
          */
-        newCycle: function newCycle() {
-            var priv = privates.get(this);
+        newCycle() {
+            const priv = privates.get(this);
 
             if (priv.closed) {
                 throw new Error("Trying to create a new cycle in a closed LogManager");
@@ -190,7 +227,7 @@
             priv.errorcount = 0;
 
             return this;
-        },
+        }
 
         /**
          * Parses the error descriptions included in error responses provided by
@@ -202,11 +239,11 @@
          * @param {Response} response server response to parse
          * @returns {String} error description
          */
-        parseErrorResponse: function parseErrorResponse(response) {
-            var errorDesc, msg;
+        parseErrorResponse(response) {
+            let errorDesc, msg;
 
             try {
-                var errorInfo = JSON.parse(response.responseText);
+                const errorInfo = JSON.parse(response.responseText);
                 if (!("description" in errorInfo)) {
                     throw new Error();
                 }
@@ -225,7 +262,7 @@
             }
 
             return msg;
-        },
+        }
 
         /**
          * Removes all the log entries stored by this log manager, including all
@@ -233,8 +270,8 @@
          *
          * @returns {Wirecloud.LogManager}
          */
-        reset: function reset() {
-            var priv = privates.get(this);
+        reset() {
+            const priv = privates.get(this);
 
             if (priv.closed) {
                 throw new Error("Closed LogManagers cannot be reset");
@@ -247,63 +284,12 @@
             return this;
         }
 
-    });
-
-    // =========================================================================
-    // PRIVATE MEMBERS
-    // =========================================================================
-
-    var privates = new WeakMap();
-
-    var appendEntry = function appendEntry(entry) {
-        var priv = privates.get(this);
-
-        if (entry.level === Wirecloud.constants.LOGGING.ERROR_MSG) {
-            priv.errorcount += 1;
-        }
-        priv.entries.unshift(entry);
-        this.dispatchEvent('newentry', entry);
-
-        if (priv.parent) {
-            appendEntry.call(priv.parent, entry);
-        }
-    };
-
-    var printEntry = function printEntry(entry) {
-
-        switch (entry.level) {
-        case Wirecloud.constants.LOGGING.ERROR_MSG:
-            // eslint-disable-next-line no-console
-            console.error(entry.msg);
-            break;
-        case Wirecloud.constants.LOGGING.WARN_MSG:
-            // eslint-disable-next-line no-console
-            console.warn(entry.msg);
-            break;
-        case Wirecloud.constants.LOGGING.DEBUG_MSG:
-        case Wirecloud.constants.LOGGING.INFO_MSG:
-            // eslint-disable-next-line no-console
-            console.info(entry.msg);
-            break;
-        }
-    };
-
-    var setParent = function setParent(parent) {
-        var priv = privates.get(this);
-
-        if (parent instanceof LogManager) {
-            if (parent.closed) {
-                throw new Error();
-            }
-            priv.parent = parent;
-        }
-    };
+    }
 
     // =========================================================================
     // EVENT HANDLERS
     // =========================================================================
 
-    Wirecloud.LogManager = LogManager;
-    Wirecloud.GlobalLogManager = new LogManager();
+    ns.GlobalLogManager = new ns.LogManager();
 
-})(StyledElements, StyledElements.Utils);
+})(Wirecloud, StyledElements, StyledElements.Utils);

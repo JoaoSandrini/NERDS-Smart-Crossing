@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2011-2016 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2020-2021 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -22,12 +23,14 @@
 /* globals StyledElements */
 
 
-(function (utils) {
+(function (se, utils) {
 
     "use strict";
 
-    var getFieldValue = function getFieldValue(item, field) {
-        var fieldPath, currentNode, currentField;
+    const privates = new WeakMap();
+
+    const getFieldValue = function getFieldValue(item, field) {
+        let fieldPath, currentNode, currentField;
 
         if (typeof field === "string") {
             fieldPath = [field];
@@ -47,9 +50,9 @@
         return currentNode;
     };
 
-    var elementPassFilter = function elementPassFilter(element, pattern) {
+    const elementPassFilter = function elementPassFilter(element, pattern) {
         return Object.getOwnPropertyNames(element).some(function (key, index, array) {
-            var value = getFieldValue(element, key);
+            const value = getFieldValue(element, key);
             switch (typeof value) {
             case "number":
                 return pattern.test("" + value);
@@ -61,23 +64,22 @@
         });
     };
 
-    var createFilterPattern = function createFilterPattern(keywords) {
+    const createFilterPattern = function createFilterPattern(keywords) {
         return new RegExp(utils.escapeRegExp(keywords), 'i');
     };
 
-    var filterElements = function filterElements(keywords) {
-        var filteredElements, i, element;
-        var priv = privates.get(this);
+    const filterElements = function filterElements(keywords) {
+        const priv = privates.get(this);
 
         if (!keywords) {
             priv.filteredElements = priv.elements.slice(0);
             return;
         }
 
-        var pattern = createFilterPattern(keywords);
-        filteredElements = [];
-        for (i = 0; i < priv.elements.length; i += 1) {
-            element = priv.elements[i];
+        const pattern = createFilterPattern(keywords);
+        const filteredElements = [];
+        for (let i = 0; i < priv.elements.length; i += 1) {
+            const element = priv.elements[i];
             if (elementPassFilter.call(this, element, pattern)) {
                 filteredElements.push(element);
             }
@@ -85,9 +87,9 @@
         priv.filteredElements = filteredElements;
     };
 
-    var sortElements = function sortElements(order) {
-        var sort_id, inverse, column, sortFunc, parseDate;
-        var priv = privates.get(this);
+    const sortElements = function sortElements(order) {
+        let sort_id, inverse, sortFunc, parseDate;
+        const priv = privates.get(this);
 
         if (order == null) {
             priv.sortedElements = priv.filteredElements;
@@ -100,7 +102,7 @@
             inverse = true;
             sort_id = sort_id.substr(1);
         }
-        column = priv.sort_info[sort_id] || {};
+        const column = priv.sort_info[sort_id] || {};
         if (!('field' in column)) {
             column.field = sort_id;
         }
@@ -173,21 +175,22 @@
         priv.sortedElements = priv.filteredElements.slice(0).sort(sortFunc);
     };
 
-    var requestFunc = function requestFunc(index, options, onSuccess, onError) {
-        var elements, page = index;
-        var priv = privates.get(this);
+    const requestFunc = function requestFunc(page, options, onSuccess, onError) {
+        const priv = privates.get(this);
 
-        if (index > priv.totalPages) {
-            index = priv.totalPages;
+        if (page > priv.totalPages) {
+            page = priv.totalPages;
+        } else if (page < 0) {
+            page = 0;
         }
-        index -= 1;
 
         filterElements.call(this, this.options.keywords);
         sortElements.call(this, this.options.order);
 
+        let elements;
         if (options.pageSize > 0) {
-            var start = index * options.pageSize;
-            var end = start + options.pageSize;
+            const start = (page - 1) * options.pageSize;
+            const end = start + options.pageSize;
             elements = priv.sortedElements.slice(start, end);
         } else {
             elements = priv.sortedElements;
@@ -196,93 +199,19 @@
         onSuccess(elements, {current_page: page, total_count: priv.sortedElements.length});
     };
 
-    var onLengthGet = function onLengthGet() {
+    const onLengthGet = function onLengthGet() {
         return privates.get(this).elements.length;
     };
 
-    /**
-     * Creates a new instance of class StaticPaginatedSource.
-     *
-     * @since 0.5
-     * @constructor
-     * @extends {StyledElements.PaginatedSource}
-     * @name StyledElements.StaticPaginatedSource
-     * @param {Object} options
-     *      The options to be used
-     */
-    var StaticPaginatedSource = function StaticPaginatedSource(options) {
-        if (typeof options !== 'object') {
-            options = {};
-        }
-        options.requestFunc = requestFunc.bind(this);
-
-        StyledElements.PaginatedSource.call(this, options);
-
-        // Initialize private variables
-        var priv = {};
-        privates.set(this, priv);
-
-        priv.sort_info = options.sort_info;
-        if (typeof priv.sort_info !== 'object') {
-            priv.sort_info = {};
-        }
-
-        // Properties
-        Object.defineProperties(this, {
-            length: {
-                get: onLengthGet
-            }
-        });
-
-        // Initialize source status
-        this.changeElements(options.initialElements);
-    };
-    utils.inherit(StaticPaginatedSource, StyledElements.PaginatedSource);
-
-    /**
-     * Updates the options used by this StaticPaginatedSource
-     *
-     * @since 0.5
-     *
-     * @param {Object} newOptions
-     *      The new options to be used.
-     */
-    StaticPaginatedSource.prototype.changeOptions = function changeOptions(newOptions) {
-        var force_sort = false;
-
-        if ('keywords' in newOptions) {
-            filterElements.call(this, newOptions.keywords);
-            force_sort = true;
-        }
-
-        if ('order' in newOptions) {
-            sortElements.call(this, newOptions.order);
-        } else if (force_sort) {
-            sortElements.call(this, this.options.order);
-        }
-        return StyledElements.PaginatedSource.prototype.changeOptions.call(this, newOptions);
-    };
-
-    /**
-     * Updates the elements of the StaticPaginatedSource
-     *
-     * @since 0.8
-     *
-     * @returns {Array}
-     *      Elements currently managed by this StaticPaginatedSource
-     */
-    StaticPaginatedSource.prototype.getElements = function getElements() {
-        return privates.get(this).elements.slice(0);
-    };
-
     // Search the position of the element
-    var searchElement = function searchElement(list, el, idAttr) {
-        if (!idAttr) {
+    const searchElement = function searchElement(list, el, getId) {
+        if (!getId) {
             return -2;
         }
-        var pos = -1;
-        list.every(function (elem, i) {
-            if (getFieldValue(elem, idAttr) === getFieldValue(el, idAttr)) {
+        let pos = -1;
+        const searchId = getId(el);
+        list.every((elem, i) => {
+            if (getId(elem) === searchId) {
                 pos = i;
                 return false;
             } else {
@@ -293,130 +222,209 @@
         return pos;
     };
 
-    /**
-     * Updates the elements of the StaticPaginatedSource
-     *
-     * @since 0.5
-     *
-     * @param {Array.<Object>} newElements
-     *      The new elements to be used.
-     * @returns {StaticPaginatedSource}
-     *      The instance on which the member is called.
-     */
-    StaticPaginatedSource.prototype.changeElements = function changeElements(newElements) {
-        var priv = privates.get(this);
-        if (Array.isArray(newElements)) {
-            if (this.options.idAttr) {
-                var bol = newElements.every(function (elem, i) {
-                    if (getFieldValue(elem, this.options.idAttr) == null) {
-                        throw new Error("All elements must have a valid ID");
-                    }
-                    return searchElement(newElements.slice(0, i), elem, this.options.idAttr) <= -1;
-                }.bind(this));
-                if (!bol) {
-                    throw new Error("All elements must have an unique ID");
+    se.StaticPaginatedSource = class StaticPaginatedSource extends se.PaginatedSource {
+
+        /**
+         * Creates a new instance of class StaticPaginatedSource.
+         *
+         * @since 0.5
+         * @constructor
+         * @extends {StyledElements.PaginatedSource}
+         * @name StyledElements.StaticPaginatedSource
+         * @param {Object} options
+         *      The options to be used
+         */
+        constructor(options) {
+            if (typeof options !== 'object') {
+                options = {};
+            }
+            options.requestFunc = requestFunc;
+            super(options);
+
+            // Initialize private variables
+            const priv = {};
+            privates.set(this, priv);
+
+            priv.sort_info = options.sort_info;
+            if (typeof priv.sort_info !== 'object') {
+                priv.sort_info = {};
+            }
+            if (typeof options.idAttr === "string") {
+                priv.extractIdFunc = (data) => data[options.idAttr];
+            } else if (Array.isArray(options.idAttr)) {
+                priv.extractIdFunc = (data) => getFieldValue(data, options.idAttr);
+            } else if (typeof options.idAttr === "function") {
+                priv.extractIdFunc = options.idAttr;
+            }
+
+            // Properties
+            Object.defineProperties(this, {
+                length: {
+                    get: onLengthGet
                 }
+            });
+
+            // Initialize source status
+            this.changeElements(options.initialElements);
+        }
+
+        /**
+         * Updates the options used by this StaticPaginatedSource
+         *
+         * @since 0.5
+         *
+         * @param {Object} newOptions
+         *      The new options to be used.
+         */
+        changeOptions(newOptions) {
+            let force_sort = false;
+
+            if ('keywords' in newOptions) {
+                filterElements.call(this, newOptions.keywords);
+                force_sort = true;
             }
-            priv.elements = newElements;
 
-        } else {
-            priv.elements = [];
-        }
-
-        filterElements.call(this, this.options.keywords);
-        sortElements.call(this, this.options.order);
-
-        this.refresh();
-
-        return this;
-    };
-
-    /**
-     * Adds or updates an element to the StaticPaginatedSource
-     *
-     * @since 0.5
-     *
-     * @param {Object} newElement
-     *      The element to be added / updated.
-     *
-     * @returns {StaticPaginatedSource}
-     *      The instance on which the member is called.
-     */
-    StaticPaginatedSource.prototype.addElement = function addElement(newElement) {
-        var priv = privates.get(this);
-
-        if (this.options.idAttr && getFieldValue(newElement, this.options.idAttr) == null) {
-            throw new Error("The element must have a valid ID");
-        }
-
-        // If the element already exists, remove it and add it again (updates it and sets it last)
-        var pos = searchElement(priv.elements, newElement, this.options.idAttr);
-        if (pos >= 0) {
-            priv.elements.splice(pos, 1);
-        }
-
-        // Add the element to the source
-        priv.elements.push(newElement);
-        // Remove it from the filtered elements
-        pos = searchElement(priv.filteredElements, newElement, this.options.idAttr);
-        if (pos >= 0) {
-            priv.filteredElements.splice(pos, 1);
-        }
-
-        // Filter the new element if there are any filters set.
-        if (this.options.keywords) {
-            var pattern = createFilterPattern(this.options.keywords);
-            if (elementPassFilter.call(this, newElement, pattern)) {
-                priv.filteredElements.push(newElement);
+            if ('order' in newOptions) {
+                sortElements.call(this, newOptions.order);
+            } else if (force_sort) {
+                sortElements.call(this, this.options.order);
             }
-        } else {
-            // IF there are no filters adds it.
-            priv.filteredElements.push(newElement);
+            return super.changeOptions(newOptions);
         }
 
-        sortElements.call(this, this.options.order);
-        this.refresh();
+        /**
+         * Updates the elements of the StaticPaginatedSource
+         *
+         * @since 0.8
+         *
+         * @returns {Array}
+         *      Elements currently managed by this StaticPaginatedSource
+         */
+        getElements() {
+            return privates.get(this).elements.slice(0);
+        }
 
-        return this;
-    };
-
-    /**
-     * Remove an element from the StaticPaginatedSource.
-     * @since 1.0.0a1
-     *
-     * @kind function
-     * @name StyledElements.StaticPaginatedSource#removeElement
-     *
-     * @param {Object} element
-     *      The element to be removed. Can contain only its ID
-     *
-     * @returns {StaticPaginatedSource}
-     *      The instance on which the member is called.
-     */
-    StaticPaginatedSource.prototype.removeElement = function removeElement(element) {
-        var priv = privates.get(this);
-        if (!this.options.idAttr) {
-            throw new Error("options.idAttr is not set");
-        } else {
-            if (getFieldValue(element, this.options.idAttr) == null) {
-                throw new Error("The element must have a valid ID");
+        /**
+         * Updates the elements of the StaticPaginatedSource
+         *
+         * @since 0.5
+         *
+         * @param {Array.<Object>} newElements
+         *      The new elements to be used.
+         * @returns {StaticPaginatedSource}
+         *      The instance on which the member is called.
+         */
+        changeElements(newElements) {
+            const priv = privates.get(this);
+            if (Array.isArray(newElements)) {
+                if (this.options.idAttr) {
+                    const bol = newElements.every((elem, i) => {
+                        if (priv.extractIdFunc(elem) == null) {
+                            throw new Error("All elements must have a valid ID");
+                        }
+                        return searchElement(newElements.slice(0, i), elem, priv.extractIdFunc) <= -1;
+                    });
+                    if (!bol) {
+                        throw new Error("All elements must have an unique ID");
+                    }
+                }
+                priv.elements = newElements;
+            } else {
+                priv.elements = [];
             }
-        }
 
-        // Look for the target element
-        var pos = searchElement(priv.elements, element, this.options.idAttr);
-        if (pos >= 0) {
-            priv.elements.splice(pos, 1);
             filterElements.call(this, this.options.keywords);
             sortElements.call(this, this.options.order);
+
+            this.refresh();
+
             return this;
-        } else {
-            throw new Error("Element does not exist");
         }
-    };
 
-    var privates = new WeakMap();
+        /**
+         * Adds or updates an element to the StaticPaginatedSource
+         *
+         * @since 0.5
+         *
+         * @param {Object} newElement
+         *      The element to be added / updated.
+         *
+         * @returns {StaticPaginatedSource}
+         *      The instance on which the member is called.
+         */
+        addElement(newElement) {
+            const priv = privates.get(this);
 
-    StyledElements.StaticPaginatedSource = StaticPaginatedSource;
+            if (this.options.idAttr && priv.extractIdFunc(newElement) == null) {
+                throw new Error("The element must have a valid ID");
+            }
 
-})(StyledElements.Utils);
+            // If the element already exists, remove it and add it again (updates it and sets it last)
+            let pos = searchElement(priv.elements, newElement, priv.extractIdFunc);
+            if (pos >= 0) {
+                priv.elements.splice(pos, 1);
+            }
+
+            // Add the element to the source
+            priv.elements.push(newElement);
+            // Remove it from the filtered elements
+            pos = searchElement(priv.filteredElements, newElement, priv.extractIdFunc);
+            if (pos >= 0) {
+                priv.filteredElements.splice(pos, 1);
+            }
+
+            // Filter the new element if there are any filters set.
+            if (this.options.keywords) {
+                const pattern = createFilterPattern(this.options.keywords);
+                if (elementPassFilter.call(this, newElement, pattern)) {
+                    priv.filteredElements.push(newElement);
+                }
+            } else {
+                // IF there are no filters adds it.
+                priv.filteredElements.push(newElement);
+            }
+
+            sortElements.call(this, this.options.order);
+            this.refresh();
+
+            return this;
+        }
+
+        /**
+         * Remove an element from the StaticPaginatedSource.
+         * @since 1.0.0a1
+         *
+         * @kind function
+         * @name StyledElements.StaticPaginatedSource#removeElement
+         *
+         * @param {Object} element
+         *      The element to be removed. Can contain only its ID
+         *
+         * @returns {StaticPaginatedSource}
+         *      The instance on which the member is called.
+         */
+        removeElement(element) {
+            const priv = privates.get(this);
+            if (!this.options.idAttr) {
+                throw new Error("options.idAttr is not set");
+            } else {
+                if (priv.extractIdFunc(element) == null) {
+                    throw new Error("The element must have a valid ID");
+                }
+            }
+
+            // Look for the target element
+            const pos = searchElement(priv.elements, element, priv.extractIdFunc);
+            if (pos >= 0) {
+                priv.elements.splice(pos, 1);
+                filterElements.call(this, this.options.keywords);
+                sortElements.call(this, this.options.order);
+                return this;
+            } else {
+                throw new Error("Element does not exist");
+            }
+        }
+
+    }
+
+})(StyledElements, StyledElements.Utils);

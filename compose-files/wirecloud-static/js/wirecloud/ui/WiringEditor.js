@@ -3,7 +3,7 @@
  *
  *     Copyright (c) 2012-2016 Universidad Politécnica de Madrid
  *     Copyright (c) 2012-2014 the Center for Open Middleware
- *     Copyright (c) 2018 Future Internet Consulting and Development Solutions S.L.
+ *     Copyright (c) 2018-2020 Future Internet Consulting and Development Solutions S.L.
  *
  *     Licensed under the Apache License, Version 2.0 (the
  *     "License"); you may not use this file except in compliance
@@ -31,226 +31,7 @@ Wirecloud.ui = Wirecloud.ui || {};
 
     "use strict";
 
-    // =========================================================================
-    // CLASS DEFINITION
-    // =========================================================================
-
-    /**
-     * Creates a new wiring editor usable for adding operators, creating and
-     * remove connections, ...
-     *
-     * @name Wirecloud.ui.WiringEditor
-     * @extends {StyledElements.Alternative}
-     *
-     * @constructor
-     *
-     * @param {Number} id
-     *      StyledElements.Alternative id
-     * @param {PlainObject} [options]
-     *      Options for initializing this WiringEditor
-     */
-    ns.WiringEditor = function WiringEditor(id, options) {
-        options = utils.merge({}, options);
-        options.class = "wc-workspace-wiring";
-
-        se.Alternative.call(this, id, options);
-
-        createAndSetUpLayout.call(this);
-
-        Wirecloud.addEventListener('loaded', createAndSetUpBehaviourEngine.bind(this));
-        Wirecloud.addEventListener('loaded', createAndSetUpComponentManager.bind(this));
-        createAndSetUpConnectionEngine.call(this);
-
-        this.suggestionManager = new ns.WiringEditor.KeywordSuggestion();
-
-        this.selectedComponents = {operator: {}, widget: {}};
-        this.selectedCount = 0;
-
-        this.orderableComponent = null;
-        this.disable();
-    };
-
-    utils.inherit(ns.WiringEditor, se.Alternative, /** @lends Wirecloud.ui.WiringEditor.prototype */ {
-
-        view_name: "wiring",
-
-        /**
-         * @override
-         */
-        _onhidden: function _onhidden(hidden) {
-
-            se.Alternative.prototype._onhidden.call(this, hidden);
-
-            if (hidden) {
-                this.unload();
-            } else {
-                this.load(Wirecloud.activeWorkspace);
-            }
-
-        },
-
-        /**
-         * [TODO: createComponent description]
-         *
-         * @param {Wiring.Component} wiringComponent
-         *      [TODO: description]
-         * @param {PlainObject} [options]
-         *      [TODO: description]
-         * @returns {ComponentDraggable}
-         *      [description]
-         */
-        createComponent: function createComponent(wiringComponent, options) {
-            var component;
-
-            options = utils.merge({commit: true, removecascade_allowed: this.behaviourEngine.enabled}, options);
-
-            component = new ns.WiringEditor.ComponentDraggable(wiringComponent, options);
-            component
-                .addEventListener('endpointadded', component_onendpointadded.bind(this))
-                .addEventListener('endpointremoved', component_onendpointremoved.bind(this))
-                .addEventListener('change', () => {
-                    this.behaviourEngine.updateComponent(component);
-                })
-                .addEventListener('click', component_onclick.bind(this))
-                .addEventListener('dragstart', component_ondragstart.bind(this))
-                .addEventListener('drag', component_ondrag.bind(this))
-                .addEventListener('dragend', component_ondragend.bind(this))
-                .addEventListener('orderstart', component_onorderstart.bind(this))
-                .addEventListener('orderend', component_onorderend.bind(this))
-                .addEventListener('optremove', () => {
-                    this.behaviourEngine.removeComponent(component);
-                })
-                .addEventListener('optremovecascade', () => {
-                    this.behaviourEngine.removeComponent(component, true);
-                })
-                .addEventListener('optshare', () => {
-                    this.behaviourEngine.updateComponent(component, true);
-                })
-                .addEventListener('remove', component_onremove.bind(this));
-
-            component.forEachEndpoint(bindEndpoint.bind(this));
-            this.initialMessage.hide();
-
-            if (options.commit) {
-                this.layout.content.appendChild(component);
-                this.behaviourEngine.updateComponent(component);
-                disableComponent.call(this, component);
-            }
-
-            return component;
-        },
-
-        buildStateData: function buildStateData() {
-            var currentState = Wirecloud.HistoryManager.getCurrentState();
-
-            return {
-                workspace_owner: currentState.workspace_owner,
-                workspace_name: currentState.workspace_name,
-                view: this.view_name
-            };
-        },
-
-        getBreadcrumb: function getBreadcrumb() {
-            var i, workspace_breadcrum = Wirecloud.UserInterfaceManager
-                .views.workspace.getBreadcrumb();
-
-            for (i = 0; i < workspace_breadcrum.length; i += 1) {
-                delete workspace_breadcrum[i].menu;
-            }
-
-            workspace_breadcrum.push({
-                label: this.view_name
-            });
-
-            return workspace_breadcrum;
-        },
-
-        getTitle: function getTitle() {
-            return utils.interpolate(utils.gettext("%(workspace_title)s - Wiring"), {
-                workspace_title: Wirecloud.UserInterfaceManager.views.workspace.getTitle()
-            });
-        },
-
-        getToolbarButtons: function getToolbarButtons() {
-            return [this.btnFindComponents, this.btnListBehaviours];
-        },
-
-        goUp: function goUp() {
-            Wirecloud.UserInterfaceManager.changeCurrentView('workspace');
-        },
-
-        /**
-         * Reads wiring configuration from the given workspace and prepares the
-         * user interface for starting using the wiring editor.
-         *
-         * @param {Wirecloud.Workspace} workspace
-         *     workspace to load
-         *
-         * @returns {Wirecloud.ui.WiringEditor}
-         *
-         */
-        load: function load(workspace) {
-            this.workspace = workspace;
-            this.errorMessages = [];
-
-            readyView.call(this);
-            loadWiringStatus.call(this);
-
-            Wirecloud.UserInterfaceManager.rootKeydownHandler = document_onkeydown.bind(this);
-            this.enable();
-
-            return this;
-        },
-
-        /**
-         * Unload any resource used for the user interface leaving the Wiring
-         * Editor ready for loading another wiring configuration.
-         *
-         * @returns {Wirecloud.ui.WiringEditor}
-         *
-         */
-        unload: function unload() {
-            this.workspace.wiring.load(this.toJSON()).save();
-            readyView.call(this);
-
-            Wirecloud.UserInterfaceManager.rootKeydownHandler = null;
-            this.disable();
-
-            return this;
-        },
-
-        /**
-         * Serializes current wiring configuration
-         *
-         * @returns {PlainObject}
-         *      Object with the wiring status version of the edited wiring
-         *      configuration, usable by the wiring engine.
-         */
-        toJSON: function toJSON() {
-            var wiringStatus = Wirecloud.Wiring.normalize();
-
-            this.connectionEngine.forEachConnection((connection) => {
-                wiringStatus.connections.push(connection._connection);
-            });
-
-            this.behaviourEngine.forEachComponent((component) => {
-                if (component.type === 'operator') {
-                    wiringStatus.operators[component.id] = component._component;
-                }
-            });
-
-            wiringStatus.visualdescription = this.behaviourEngine.toJSON();
-
-            return wiringStatus;
-        }
-
-    });
-
-    // =========================================================================
-    // PRIVATE MEMBERS
-    // =========================================================================
-
-    var bindEndpoint = function bindEndpoint(endpoint) {
+    const bindEndpoint = function bindEndpoint(endpoint) {
         this.connectionEngine.appendEndpoint(endpoint);
         this.suggestionManager.appendEndpoint(endpoint);
 
@@ -267,7 +48,7 @@ Wirecloud.ui = Wirecloud.ui || {};
             });
     };
 
-    var createAndSetUpBehaviourEngine = function createAndSetUpBehaviourEngine() {
+    const createAndSetUpBehaviourEngine = function createAndSetUpBehaviourEngine() {
         this.behaviourEngine = new ns.WiringEditor.BehaviourEngine();
         this.behaviourEngine
             .addEventListener('activate', behaviour_onactivate.bind(this))
@@ -277,7 +58,7 @@ Wirecloud.ui = Wirecloud.ui || {};
         this.layout.appendChild(this.behaviourEngine);
     };
 
-    var createAndSetUpComponentManager = function createAndSetUpComponentManager() {
+    const createAndSetUpComponentManager = function createAndSetUpComponentManager() {
         this.componentManager =  new ns.WiringEditor.ComponentShowcase();
         this.componentManager.addEventListener('create', (showcase, group, button) => {
             button.disable();
@@ -313,7 +94,7 @@ Wirecloud.ui = Wirecloud.ui || {};
         this.layout.appendChild(this.componentManager);
     };
 
-    var createAndSetUpConnectionEngine = function createAndSetUpConnectionEngine() {
+    const createAndSetUpConnectionEngine = function createAndSetUpConnectionEngine() {
         this.connectionEngine = new ns.WiringEditor.ConnectionEngine(this.layout.content, findWiringEngine.bind(this));
         this.connectionEngine
             .addEventListener('click', connection_onclick.bind(this))
@@ -325,13 +106,13 @@ Wirecloud.ui = Wirecloud.ui || {};
         return this;
     };
 
-    var findWiringEngine = function findWiringEngine() {
+    const findWiringEngine = function findWiringEngine() {
         return this.workspace.wiring;
     };
 
-    var createAndSetUpLayout = function createAndSetUpLayout() {
-        var centerContainer = new se.Container({class: 'se-vl-center-container'});
-        var southContainer = new se.Container({class: 'se-vl-south-container'});
+    const createAndSetUpLayout = function createAndSetUpLayout() {
+        const centerContainer = new se.Container({class: 'se-vl-center-container'});
+        const southContainer = new se.Container({class: 'se-vl-south-container'});
 
         this.layout = new se.OffCanvasLayout();
         this.layout.sidebar.addClassName("wiring-sidebar");
@@ -385,8 +166,8 @@ Wirecloud.ui = Wirecloud.ui || {};
         centerContainer.appendChild(this.layout);
     };
 
-    var createInitialMessage = function createInitialMessage() {
-        var alert = new se.Alert({
+    const createInitialMessage = function createInitialMessage() {
+        const alert = new se.Alert({
             title: utils.gettext("Hello, welcome to the Wiring Editor view!"),
             message: utils.gettext("In this view you can connect all the components of your dashboard in a visual way."),
             state: 'info',
@@ -399,12 +180,12 @@ Wirecloud.ui = Wirecloud.ui || {};
         return alert;
     };
 
-    var setUpNavbarView = function setUpNavbarView() {
+    const setUpNavbarView = function setUpNavbarView() {
         this.btnFindComponents = new se.ToggleButton({
             title: utils.gettext("Find components"),
             class: "we-show-component-sidebar-button",
-            iconClass: "fa fa-archive",
-            stackedIconClass: "fa fa-plus-circle"
+            iconClass: "fas fa-archive",
+            stackedIconClass: "fas fa-plus-circle"
         });
         this.btnFindComponents.addEventListener('click', function (button) {
             if (button.active) {
@@ -416,7 +197,7 @@ Wirecloud.ui = Wirecloud.ui || {};
         this.btnListBehaviours = new se.ToggleButton({
             title: utils.gettext("List behaviours"),
             class: "we-show-behaviour-sidebar-button",
-            iconClass: "fa fa-sitemap"
+            iconClass: "fas fa-sitemap"
         });
         this.btnListBehaviours.addEventListener('click', function (button) {
             showSelectedPanel.call(this, button, 0);
@@ -425,8 +206,8 @@ Wirecloud.ui = Wirecloud.ui || {};
         return this;
     };
 
-    var disableComponent = function disableComponent(component) {
-        var item = this.componentManager.findComponent(component.type, component.id);
+    const disableComponent = function disableComponent(component) {
+        const item = this.componentManager.findComponent(component.type, component.id);
 
         if (item != null) {
             item.used = true;
@@ -435,7 +216,7 @@ Wirecloud.ui = Wirecloud.ui || {};
         return this;
     };
 
-    var readyView = function readyView() {
+    const readyView = function readyView() {
         this.layout.slideOut();
 
         this.behaviourEngine.clear();
@@ -445,11 +226,9 @@ Wirecloud.ui = Wirecloud.ui || {};
         this.orderableComponent = null;
     };
 
-    var loadWiringStatus = function loadWiringStatus() {
-        var wiringEngine, visualStatus;
-
-        wiringEngine = this.workspace.wiring;
-        visualStatus = wiringEngine.visualdescription;
+    const loadWiringStatus = function loadWiringStatus() {
+        const wiringEngine = this.workspace.wiring;
+        const visualStatus = wiringEngine.visualdescription;
 
         // Loading the widgets used in this workspace...
         loadComponents.call(this, this.workspace.widgets, visualStatus.components.widget);
@@ -466,17 +245,17 @@ Wirecloud.ui = Wirecloud.ui || {};
         this.behaviourEngine.loadBehaviours(visualStatus.behaviours);
     };
 
-    var loadConnections = function loadConnections(connections, vInfo) {
+    const loadConnections = function loadConnections(connections, vInfo) {
         connections.forEach(function (connection) {
-            var i;
+            let i;
 
             if (connection.volatile) {
                 return;
             }
 
-            let source = findEndpoint.call(this, 'source', connection.source);
-            let target = findEndpoint.call(this, 'target', connection.target);
-            let options = {};
+            const source = findEndpoint.call(this, 'source', connection.source);
+            const target = findEndpoint.call(this, 'target', connection.target);
+            const options = {};
 
             for (i = vInfo.length - 1; i >= 0; i--) {
                 if (connection.source.id === vInfo[i].sourcename && connection.target.id === vInfo[i].targetname) {
@@ -491,7 +270,7 @@ Wirecloud.ui = Wirecloud.ui || {};
         }, this);
     };
 
-    var loadComponents = function loadComponents(components, visualInfo) {
+    const loadComponents = function loadComponents(components, visualInfo) {
         components.forEach(function (component) {
             this.componentManager.addComponent(component);
 
@@ -501,17 +280,17 @@ Wirecloud.ui = Wirecloud.ui || {};
         }, this);
     };
 
-    var component_onendpointadded = function component_onendpointadded(component, endpoint) {
+    const component_onendpointadded = function component_onendpointadded(component, endpoint) {
         bindEndpoint.call(this, endpoint);
     };
 
-    var component_onendpointremoved = function component_onendpointremoved(component, endpoint) {
+    const component_onendpointremoved = function component_onendpointremoved(component, endpoint) {
         this.connectionEngine.removeEndpoint(endpoint);
         this.suggestionManager.removeEndpoint(endpoint);
     };
 
-    var findEndpoint = function findEndpoint(rol, endpoint) {
-        var component;
+    const findEndpoint = function findEndpoint(rol, endpoint) {
+        let component;
 
         component = this.behaviourEngine.components[endpoint.component.meta.type][endpoint.component.id];
 
@@ -523,8 +302,8 @@ Wirecloud.ui = Wirecloud.ui || {};
         return component.getEndpoint(rol, endpoint.name);
     };
 
-    var clearComponentSelection = function clearComponentSelection() {
-        var type, id, component;
+    const clearComponentSelection = function clearComponentSelection() {
+        let type, id, component;
 
         for (type in this.selectedComponents) {
             for (id in this.selectedComponents[type]) {
@@ -538,18 +317,16 @@ Wirecloud.ui = Wirecloud.ui || {};
         this.selectedCount = 0;
     };
 
-    var document_onkeydown = function document_onkeydown(key, modifiers) {
-        var type, id, component, componentsToRemove = [];
-
+    const document_onkeydown = function document_onkeydown(key, modifiers) {
         switch (key) {
         case 'Backspace':
         case 'Delete':
+            const componentsToRemove = [];
 
             if (hasSelectedComponents.call(this)) {
-
-                for (type in this.selectedComponents) {
-                    for (id in this.selectedComponents[type]) {
-                        component = this.selectedComponents[type][id];
+                for (const type in this.selectedComponents) {
+                    for (const id in this.selectedComponents[type]) {
+                        const component = this.selectedComponents[type][id];
 
                         if (component.isRemovable()) {
                             componentsToRemove.push(component);
@@ -567,27 +344,27 @@ Wirecloud.ui = Wirecloud.ui || {};
         }
     };
 
-    var hasSelectedComponents = function hasSelectedComponents() {
+    const hasSelectedComponents = function hasSelectedComponents() {
         return Object.keys(this.selectedComponents.operator).length > 0 || Object.keys(this.selectedComponents.widget).length > 0;
     };
 
-    var behaviourengine_onenable = function behaviourengine_onenable(behaviourEngine, enabled) {
-        this.connectionEngine.forEachConnection(function (connection) {
+    const behaviourengine_onenable = function behaviourengine_onenable(behaviourEngine, enabled) {
+        this.connectionEngine.forEachConnection((connection) => {
             connection.removeAllowed = true;
             connection.background = false;
             this.behaviourEngine.updateConnection(connection);
-        }.bind(this));
+        });
 
-        this.behaviourEngine.forEachComponent(function (component) {
+        this.behaviourEngine.forEachComponent((component) => {
             component.removeCascadeAllowed = enabled;
             component.removeAllowed = true;
             component.background = false;
             this.behaviourEngine.updateComponent(component);
-        }.bind(this));
+        });
     };
 
-    var behaviour_onactivate = function behaviour_onactivate(behaviourEngine, behaviour, viewpoint) {
-        var currentStatus = behaviour.getCurrentStatus();
+    const behaviour_onactivate = function behaviour_onactivate(behaviourEngine, behaviour, viewpoint) {
+        const currentStatus = behaviour.getCurrentStatus();
 
         switch (viewpoint) {
         case ns.WiringEditor.BehaviourEngine.GLOBAL:
@@ -609,7 +386,7 @@ Wirecloud.ui = Wirecloud.ui || {};
         behaviour_onchange.call(this, behaviourEngine, currentStatus, true);
     };
 
-    var connection_onduplicate = function connection_onduplicate(connectionEngine, connection, connectionBackup) {
+    const connection_onduplicate = function connection_onduplicate(connectionEngine, connection, connectionBackup) {
         if (connection.background) {
             this.behaviourEngine.updateConnection(connection, true);
 
@@ -619,7 +396,7 @@ Wirecloud.ui = Wirecloud.ui || {};
         }
     };
 
-    var connection_onestablish = function connection_onestablish(connectionEngine, connection, connectionBackup) {
+    const connection_onestablish = function connection_onestablish(connectionEngine, connection, connectionBackup) {
         this.behaviourEngine.updateConnection(connection);
 
         connection
@@ -638,7 +415,7 @@ Wirecloud.ui = Wirecloud.ui || {};
         }
     };
 
-    var removeBackupConnection = function removeBackupConnection(connection) {
+    const removeBackupConnection = function removeBackupConnection(connection) {
         this.behaviourEngine.removeConnection(connection);
 
         if (this.behaviourEngine.hasConnection(connection)) {
@@ -646,19 +423,18 @@ Wirecloud.ui = Wirecloud.ui || {};
         }
     };
 
-    var showConnectionChangeModal = function showConnectionChangeModal(connection) {
-        var modal, message;
-        var builder = new se.GUIBuilder();
+    const showConnectionChangeModal = function showConnectionChangeModal(connection) {
+        const builder = new se.GUIBuilder();
 
-        message = builder.parse(builder.DEFAULT_OPENING + utils.gettext("The connection will also be modified for the rest of behaviours, would you like to continue?") + builder.DEFAULT_CLOSING);
+        const message = builder.parse(builder.DEFAULT_OPENING + utils.gettext("The connection will also be modified for the rest of behaviours, would you like to continue?") + builder.DEFAULT_CLOSING);
 
-        modal = new Wirecloud.ui.AlertWindowMenu(message);
+        const modal = new Wirecloud.ui.AlertWindowMenu(message);
         modal.setHandler(() => {
             this.behaviourEngine.removeConnection(connection, true);
         }).show();
     };
 
-    var component_onremove = function component_onremove(component) {
+    const component_onremove = function component_onremove(component) {
         component.forEachEndpoint(function (endpoint) {
             this.connectionEngine.removeEndpoint(endpoint);
             this.suggestionManager.removeEndpoint(endpoint);
@@ -680,7 +456,7 @@ Wirecloud.ui = Wirecloud.ui || {};
         }
     };
 
-    var connection_onclick = function connection_onclick(connectionEngine, connectionClicked) {
+    const connection_onclick = function connection_onclick(connectionEngine, connectionClicked) {
         clearComponentSelection.call(this);
 
         if (this.orderableComponent != null) {
@@ -689,7 +465,7 @@ Wirecloud.ui = Wirecloud.ui || {};
         }
     };
 
-    var connection_ondragstart = function connection_ondragstart(connectionEngine, connection, initialEndpoint, realEndpoint) {
+    const connection_ondragstart = function connection_ondragstart(connectionEngine, connection, initialEndpoint, realEndpoint) {
         this.collapsedComponents = [];
 
         this.behaviourEngine.forEachComponent((component) => {
@@ -707,7 +483,7 @@ Wirecloud.ui = Wirecloud.ui || {};
         this.layout.content.get().removeEventListener('click', this._layout_onclick);
     };
 
-    var connection_ondragend = function connection_ondragend(connectionEngine, connection, initialEndpoint) {
+    const connection_ondragend = function connection_ondragend(connectionEngine, connection, initialEndpoint) {
         if (this.collapsedComponents != null) {
 
             this.collapsedComponents.forEach((component) => {
@@ -724,7 +500,7 @@ Wirecloud.ui = Wirecloud.ui || {};
         }, 0);
     };
 
-    var behaviour_onchange = function behaviour_onchange(behaviourEngine, currentStatus, enabled) {
+    const behaviour_onchange = function behaviour_onchange(behaviourEngine, currentStatus, enabled) {
         if (enabled) {
             currentStatus.title = "<strong>" + utils.gettext("Behaviour") + ":</strong> " + currentStatus.title;
         }
@@ -735,7 +511,7 @@ Wirecloud.ui = Wirecloud.ui || {};
         this.legend.widgets.textContent = currentStatus.components.widget;
     };
 
-    var layout_onclick = function layout_onclick() {
+    const layout_onclick = function layout_onclick() {
         clearComponentSelection.call(this);
 
         if (this.orderableComponent != null) {
@@ -746,12 +522,12 @@ Wirecloud.ui = Wirecloud.ui || {};
         this.connectionEngine.setUp();
     };
 
-    var layout_ondblclick = function layout_ondblclick(event) {
+    const layout_ondblclick = function layout_ondblclick(event) {
         event.preventDefault();
         this.layout.slideOut();
     };
 
-    var showSelectedPanel = function showSelectedPanel(button, panelIndex) {
+    const showSelectedPanel = function showSelectedPanel(button, panelIndex) {
         if (button.active) {
             this.layout.slideIn(panelIndex);
         } else {
@@ -759,8 +535,8 @@ Wirecloud.ui = Wirecloud.ui || {};
         }
     };
 
-    var component_onclick = function component_onclick(component, event) {
-        var type, id;
+    const component_onclick = function component_onclick(component, event) {
+        let type, id;
 
         if (!component.active && component.id in this.selectedComponents[component.type]) {
             if (event.ctrlKey || event.metaKey) {
@@ -792,8 +568,8 @@ Wirecloud.ui = Wirecloud.ui || {};
         }
     };
 
-    var component_ondragstart = function component_ondragstart(component, event) {
-        var type, id, selectedComponent;
+    const component_ondragstart = function component_ondragstart(component, event) {
+        let type, id, selectedComponent;
 
         if (this.orderableComponent != null) {
             this.orderableComponent.setUp();
@@ -828,8 +604,8 @@ Wirecloud.ui = Wirecloud.ui || {};
         }
     };
 
-    var component_ondrag = function component_ondrag(component, x, y) {
-        var type, id, selectedComponent;
+    const component_ondrag = function component_ondrag(component, x, y) {
+        let type, id, selectedComponent;
 
         for (type in this.selectedComponents) {
             for (id in this.selectedComponents[type]) {
@@ -844,8 +620,8 @@ Wirecloud.ui = Wirecloud.ui || {};
         }
     };
 
-    var component_ondragend = function component_ondragend(component) {
-        var type, id, selectedComponent;
+    const component_ondragend = function component_ondragend(component) {
+        let type, id, selectedComponent;
 
         for (type in this.selectedComponents) {
             for (id in this.selectedComponents[type]) {
@@ -859,7 +635,7 @@ Wirecloud.ui = Wirecloud.ui || {};
         }
     };
 
-    var component_onorderstart = function component_onorderstart(component) {
+    const component_onorderstart = function component_onorderstart(component) {
         if (this.orderableComponent != null && !this.orderableComponent.equals(component)) {
             this.orderableComponent.setUp();
         }
@@ -867,12 +643,225 @@ Wirecloud.ui = Wirecloud.ui || {};
         this.orderableComponent = component;
         this.connectionEngine.enabled = false;
         this.suggestionManager.disable();
+
+        this.layout.content.get().removeEventListener('click', this._layout_onclick);
     };
 
-    var component_onorderend = function component_onorderend(component) {
+    const component_onorderend = function component_onorderend(component) {
         this.orderableComponent = null;
         this.connectionEngine.enabled = true;
         this.suggestionManager.enable();
+
+        setTimeout(() => {
+            this.layout.content.get().addEventListener('click', this._layout_onclick);
+        }, 0);
     };
+
+    /**
+     * Creates a new wiring editor usable for adding operators, creating and
+     * remove connections, ...
+     *
+     * @name Wirecloud.ui.WiringEditor
+     * @extends {StyledElements.Alternative}
+     *
+     * @constructor
+     *
+     * @param {Number} id
+     *      StyledElements.Alternative id
+     * @param {PlainObject} [options]
+     *      Options for initializing this WiringEditor
+     */
+    ns.WiringEditor = class WiringEditor extends se.Alternative {
+
+        constructor(id, options) {
+            options = utils.merge({}, options);
+            options.class = "wc-workspace-wiring";
+
+            super(id, options);
+
+            createAndSetUpLayout.call(this);
+
+            Wirecloud.addEventListener('loaded', createAndSetUpBehaviourEngine.bind(this));
+            Wirecloud.addEventListener('loaded', createAndSetUpComponentManager.bind(this));
+            createAndSetUpConnectionEngine.call(this);
+
+            this.suggestionManager = new ns.WiringEditor.KeywordSuggestion();
+
+            this.selectedComponents = {operator: {}, widget: {}};
+            this.selectedCount = 0;
+
+            this.orderableComponent = null;
+            this.disable();
+        }
+
+        /**
+         * @override
+         */
+        _onhidden(hidden) {
+
+            super._onhidden(hidden);
+
+            if (hidden) {
+                this.unload();
+            } else {
+                this.load(Wirecloud.activeWorkspace);
+            }
+
+        }
+
+        /**
+         * [TODO: createComponent description]
+         *
+         * @param {Wiring.Component} wiringComponent
+         *      [TODO: description]
+         * @param {PlainObject} [options]
+         *      [TODO: description]
+         * @returns {ComponentDraggable}
+         *      [description]
+         */
+        createComponent(wiringComponent, options) {
+            options = utils.merge({commit: true, removecascade_allowed: this.behaviourEngine.enabled}, options);
+
+            const component = new ns.WiringEditor.ComponentDraggable(wiringComponent, options);
+            component
+                .addEventListener('endpointadded', component_onendpointadded.bind(this))
+                .addEventListener('endpointremoved', component_onendpointremoved.bind(this))
+                .addEventListener('change', () => {
+                    this.behaviourEngine.updateComponent(component);
+                })
+                .addEventListener('click', component_onclick.bind(this))
+                .addEventListener('dragstart', component_ondragstart.bind(this))
+                .addEventListener('drag', component_ondrag.bind(this))
+                .addEventListener('dragend', component_ondragend.bind(this))
+                .addEventListener('orderstart', component_onorderstart.bind(this))
+                .addEventListener('orderend', component_onorderend.bind(this))
+                .addEventListener('optremove', () => {
+                    this.behaviourEngine.removeComponent(component);
+                })
+                .addEventListener('optremovecascade', () => {
+                    this.behaviourEngine.removeComponent(component, true);
+                })
+                .addEventListener('optshare', () => {
+                    this.behaviourEngine.updateComponent(component, true);
+                })
+                .addEventListener('remove', component_onremove.bind(this));
+
+            component.forEachEndpoint(bindEndpoint.bind(this));
+            this.initialMessage.hide();
+
+            if (options.commit) {
+                this.layout.content.appendChild(component);
+                this.behaviourEngine.updateComponent(component);
+                disableComponent.call(this, component);
+            }
+
+            return component;
+        }
+
+        buildStateData() {
+            const currentState = Wirecloud.HistoryManager.getCurrentState();
+            return {
+                workspace_owner: currentState.workspace_owner,
+                workspace_name: currentState.workspace_name,
+                view: this.view_name,
+                params: currentState.params
+            };
+        }
+
+        getBreadcrumb() {
+            const workspace_breadcrum = Wirecloud.UserInterfaceManager.views.workspace.getBreadcrumb();
+
+            for (let i = 0; i < workspace_breadcrum.length; i += 1) {
+                delete workspace_breadcrum[i].menu;
+            }
+
+            workspace_breadcrum.push({
+                label: this.view_name
+            });
+
+            return workspace_breadcrum;
+        }
+
+        getTitle() {
+            return utils.interpolate(utils.gettext("%(workspace_title)s - Wiring"), {
+                workspace_title: Wirecloud.UserInterfaceManager.views.workspace.getTitle()
+            });
+        }
+
+        getToolbarButtons() {
+            return [this.btnFindComponents, this.btnListBehaviours];
+        }
+
+        goUp() {
+            Wirecloud.UserInterfaceManager.changeCurrentView('workspace');
+        }
+
+        /**
+         * Reads wiring configuration from the given workspace and prepares the
+         * user interface for starting using the wiring editor.
+         *
+         * @param {Wirecloud.Workspace} workspace
+         *     workspace to load
+         *
+         * @returns {Wirecloud.ui.WiringEditor}
+         *
+         */
+        load(workspace) {
+            this.workspace = workspace;
+            this.errorMessages = [];
+
+            readyView.call(this);
+            loadWiringStatus.call(this);
+
+            Wirecloud.UserInterfaceManager.rootKeydownHandler = document_onkeydown.bind(this);
+            this.enable();
+
+            return this;
+        }
+
+        /**
+         * Unload any resource used for the user interface leaving the Wiring
+         * Editor ready for loading another wiring configuration.
+         *
+         * @returns {Wirecloud.ui.WiringEditor}
+         *
+         */
+        unload() {
+            this.workspace.wiring.load(this.toJSON()).save();
+            readyView.call(this);
+
+            Wirecloud.UserInterfaceManager.rootKeydownHandler = null;
+            this.disable();
+
+            return this;
+        }
+
+        /**
+         * Serializes current wiring configuration
+         *
+         * @returns {PlainObject}
+         *      Object with the wiring status version of the edited wiring
+         *      configuration, usable by the wiring engine.
+         */
+        toJSON() {
+            const wiringStatus = Wirecloud.Wiring.normalize();
+
+            this.connectionEngine.forEachConnection((connection) => {
+                wiringStatus.connections.push(connection._connection);
+            });
+
+            this.behaviourEngine.forEachComponent((component) => {
+                if (component.type === 'operator') {
+                    wiringStatus.operators[component.id] = component._component;
+                }
+            });
+
+            wiringStatus.visualdescription = this.behaviourEngine.toJSON();
+
+            return wiringStatus;
+        }
+
+    }
+    ns.WiringEditor.prototype.view_name = "wiring";
 
 })(Wirecloud.ui, StyledElements, StyledElements.Utils);

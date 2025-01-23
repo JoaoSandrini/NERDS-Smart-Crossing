@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2008-2016 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2020 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -22,102 +23,123 @@
 /* globals StyledElements */
 
 
-(function (utils) {
+(function (se, utils) {
 
     "use strict";
 
     /**
+     * A menu item that opens a sub menu.
      *
+     * @name StyledElements.SubMenuItem
+     *
+     * @param {String} title Label to display in the user interface
+     * @param {Object} [options]
+     * Available options:
+     * - `enabled` {Boolean} initial state (available since version 0.11.0)
+     * - `iconClass` {String} initial icon class (available since version 0.11.0)
      */
-    var SubMenuItem = function SubMenuItem(text, options) {
+    se.SubMenuItem = class SubMenuItem extends se.PopupMenuBase {
 
-        if (arguments.length === 0) {
-            return true;
-        }
+        constructor(title, options) {
+            options = utils.merge({
+                placement: ['right-bottom', 'left-bottom']
+            }, options);
 
-        options = utils.merge({
-            'position': ['right-bottom', 'left-bottom']
-        }, options);
+            super(options);
+            this.wrapperElement.classList.add('se-popup-submenu');
 
-        StyledElements.PopupMenuBase.call(this, options);
-        this.wrapperElement.classList.add('se-popup-submenu');
+            const menuitem = new StyledElements.MenuItem(title, () => {
+                this.show(menuitem);
+            });
+            menuitem.addClassName('submenu');
+            Object.defineProperty(menuitem, "submenu", {"value": this});
 
-        this.menuItem = new StyledElements.MenuItem(text, function () {
-            this.submenu.show(this.getBoundingClientRect());
-        });
-        this.menuItem.addClassName('submenu');
-        this.menuItem.submenu = this;
-    };
-    utils.inherit(SubMenuItem, StyledElements.PopupMenuBase);
+            Object.defineProperties(this, {
+                /**
+                 * @memberOf StyledElements.SubMenuItem#
+                 * @type {StyledElements.MenuItem}
+                 */
+                menuitem: {value: menuitem},
+                title: {get: () => {return menuitem.title;}}
+            });
 
-    SubMenuItem.prototype._getContext = function _getContext() {
-        if (this.parentMenu instanceof SubMenuItem) {
-            return this.parentMenu._getContext();
-        } else {
-            return this.parentMenu._context;
-        }
-    };
-
-    SubMenuItem.prototype._menuItemCallback = function _menuItemCallback(menuItem) {
-        var currentMenu = this;
-        while (currentMenu.parentMenu) {
-            currentMenu = currentMenu.parentMenu;
-        }
-        currentMenu.hide();
-        menuItem.run(currentMenu._context);
-    };
-
-    SubMenuItem.prototype._setParentPopupMenu = function _setParentPopupMenu(popupMenu) {
-        this.parentMenu = popupMenu;
-
-        this.parentMenu.addEventListener('itemOver', function (popupMenu, item) {
-            if (item === this.menuItem) {
-                this.show(this.menuItem.getBoundingClientRect());
-            } else {
-                this.hide();
+            if (options.enabled != null) {
+                this.enabled = options.enabled;
             }
-        }.bind(this));
-    };
 
-    SubMenuItem.prototype._getMenuItem = function _getMenuItem() {
-        return this.menuItem;
-    };
-
-    SubMenuItem.prototype.addEventListener = function addEventListener(eventId, handler) {
-        switch (eventId) {
-        case 'mouseenter':
-        case 'mouseleave':
-        case 'click':
-        case 'blur':
-        case 'focus':
-            return this.menuItem.addEventListener(eventId, handler);
-        default:
-            return StyledElements.PopupMenuBase.prototype.addEventListener.call(this, eventId, handler);
+            if (options.iconClass != null) {
+                this.addIconClass(options.iconClass);
+            }
         }
-    };
 
-    SubMenuItem.prototype.enable = function enable() {
-        this.menuItem.enable();
-    };
-
-    SubMenuItem.prototype.disable = function disable() {
-        this.menuItem.disable();
-    };
-
-    SubMenuItem.prototype.setDisabled = function setDisabled(disabled) {
-        this.menuItem.setDisabled(disabled);
-    };
-
-    SubMenuItem.prototype.destroy = function destroy() {
-        if (this.menuItem) {
-            this.menuItem.destroy();
+        _menuItemCallback(menuitem) {
+            let currentMenu = this;
+            while (currentMenu.parentMenu) {
+                currentMenu = currentMenu.parentMenu;
+            }
+            currentMenu.hide();
+            menuitem.run(currentMenu._context);
         }
-        this.menuItem = null;
 
-        StyledElements.PopupMenuBase.prototype.destroy.call(this);
-    };
+        _setParentPopupMenu(popupMenu) {
+            this.parentMenu = popupMenu;
 
+            this.parentMenu.addEventListener('itemOver', (popupMenu, item) => {
+                if (item === this.menuitem) {
+                    this.show(this.menuitem);
+                } else {
+                    this.hide();
+                }
+            });
+        }
 
-    StyledElements.SubMenuItem = SubMenuItem;
+        addEventListener(eventId, handler) {
+            switch (eventId) {
+            case 'mouseenter':
+            case 'mouseleave':
+            case 'click':
+            case 'blur':
+            case 'focus':
+                this.menuitem.addEventListener(eventId, handler);
+                return this;
+            default:
+                return super.addEventListener(eventId, handler);
+            }
+        }
 
-})(StyledElements.Utils);
+        /**
+         * Adds an icon class to this Menu Item
+         *
+         * @since 0.11.0
+         *
+         * @param {String} iconClass - css class to add to the icon
+         * @returns {StyledElements.SubMenuItem} - The instance on which the member is called.
+         */
+        addIconClass(iconClass) {
+            this.menuitem.addIconClass(iconClass);
+            return this;
+        }
+
+        enable() {
+            this.menuitem.enable();
+            return this;
+        }
+
+        disable() {
+            this.menuitem.disable();
+            return this;
+        }
+
+        setDisabled(disabled) {
+            this.menuitem.setDisabled(disabled);
+            return this;
+        }
+
+        destroy() {
+            this.menuitem.destroy();
+            super.destroy();
+        }
+
+    }
+
+})(StyledElements, StyledElements.Utils);

@@ -1,5 +1,6 @@
 /*
  *     Copyright (c) 2011-2016 CoNWeT Lab., Universidad Politécnica de Madrid
+ *     Copyright (c) 2020 Future Internet Consulting and Development Solutions S.L.
  *
  *     This file is part of Wirecloud Platform.
  *
@@ -22,57 +23,56 @@
 /* globals StyledElements */
 
 
-(function (utils) {
+(function (se, utils) {
 
     "use strict";
 
-    var disableCallback = function disableCallback(e) {
+    const disableCallback = function disableCallback(e) {
 
         if (e.button !== 0) {
             return;
         }
 
-        var boundingBox = this.wrapperElement.getBoundingClientRect();
+        const boundingBox = this.wrapperElement.getBoundingClientRect();
 
         if (e.clientX < boundingBox.left || e.clientX > boundingBox.right || e.clientY < boundingBox.top || e.clientY > boundingBox.bottom) {
             setTimeout(this.hide.bind(this), 0);
         }
     };
 
-    /**
-     * @since 0.5
-     * @extends StyledElements.PopupMenuBase
-     */
-    var PopupMenu = function PopupMenu(options) {
-        StyledElements.PopupMenuBase.call(this, options);
+    se.PopupMenu = class PopupMenu extends se.PopupMenuBase {
 
-        this._disableCallback = disableCallback.bind(this);
-    };
-    utils.inherit(PopupMenu, StyledElements.PopupMenuBase);
+        /**
+         * @since 0.5
+         * @extends StyledElements.PopupMenuBase
+         */
+        constructor(options) {
+            super(options);
 
-    PopupMenu.prototype.show = function show(refPosition) {
-        document.addEventListener("click", this._disableCallback, true);
+            this._disableCallback = disableCallback.bind(this);
+        }
 
-        StyledElements.PopupMenuBase.prototype.show.call(this, refPosition);
+        show(refPosition) {
+            document.addEventListener("click", this._disableCallback, true);
 
-        return this;
-    };
+            return super.show(refPosition);
+        }
 
-    PopupMenu.prototype.hide = function hide() {
-        StyledElements.PopupMenuBase.prototype.hide.call(this);
+        hide() {
+            super.hide();
 
-        document.removeEventListener("click", this._disableCallback, true);
-        document.removeEventListener("contextmenu", this._disableCallback, true);
+            document.removeEventListener("click", this._disableCallback, true);
+            document.removeEventListener("contextmenu", this._disableCallback, true);
 
-        return this;
-    };
+            return this;
+        }
 
-    PopupMenu.prototype.destroy = function destroy() {
-        this._disableCallback = null;
+        destroy() {
+            this._disableCallback = null;
 
-        StyledElements.PopupMenuBase.prototype.destroy.call(this);
-    };
+            super.destroy();
+        }
 
-    StyledElements.PopupMenu = PopupMenu;
+    }
 
-})(StyledElements.Utils);
+})(StyledElements, StyledElements.Utils);

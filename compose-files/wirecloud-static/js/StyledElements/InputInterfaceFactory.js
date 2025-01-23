@@ -26,34 +26,35 @@
 
     "use strict";
 
-    var default_mapping = {
-        'boolean': StyledElements.BooleanInputInterface,
-        'text': StyledElements.TextInputInterface,
-        'version': StyledElements.VersionInputInterface,
-        'password': StyledElements.PasswordInputInterface,
-        'hidden': StyledElements.HiddenInputInterface,
-        'list': StyledElements.ListInputInterface,
-        'number': StyledElements.NumberInputInterface,
-        'longtext': StyledElements.LongTextInputInterface,
-        'url': StyledElements.URLInputInterface,
-        'email': StyledElements.EMailInputInterface,
-        'select': StyledElements.SelectInputInterface,
-        'buttons': StyledElements.ButtonGroupInputInterface,
-        'file': StyledElements.FileInputInterface,
-        'fieldset': StyledElements.FieldSetInterface,
-        'multivalued': StyledElements.MultivaluedInputInterface
+    const default_mapping = {
+        boolean: StyledElements.BooleanInputInterface,
+        text: StyledElements.TextInputInterface,
+        version: StyledElements.VersionInputInterface,
+        password: StyledElements.PasswordInputInterface,
+        hidden: StyledElements.HiddenInputInterface,
+        list: StyledElements.ListInputInterface,
+        number: StyledElements.NumberInputInterface,
+        longtext: StyledElements.LongTextInputInterface,
+        url: StyledElements.URLInputInterface,
+        email: StyledElements.EMailInputInterface,
+        select: StyledElements.SelectInputInterface,
+        buttons: StyledElements.ButtonGroupInputInterface,
+        file: StyledElements.FileInputInterface,
+        fieldset: StyledElements.FieldSetInterface,
+        multivalued: StyledElements.MultivaluedInputInterface,
+        code: StyledElements.CodeInputInterface
     };
 
-    var InputInterfaceFactory = function InputInterfaceFactory() {
+    const InputInterfaceFactory = function InputInterfaceFactory() {
 
-        var mapping = StyledElements.Utils.clone(default_mapping);
+        const mapping = StyledElements.Utils.clone(default_mapping);
 
         this.createInterface = function createInterface(fieldId, fieldDesc) {
-            var Class_ = mapping[fieldDesc.type];
+            const Class_ = mapping[fieldDesc.type != null ? fieldDesc.type : 'text'];
             if (Class_ == null) {
                 throw new Error(fieldDesc.type);
             }
-            var instance = new Class_(fieldId, fieldDesc, this);
+            const instance = new Class_(fieldId, fieldDesc, this);
             if (fieldDesc.initiallyDisabled) {
                 instance.disable();
             }

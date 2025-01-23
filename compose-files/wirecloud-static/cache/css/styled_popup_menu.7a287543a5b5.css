@@ -1,0 +1,86 @@
+.se-popup-menu {
+  position: absolute;
+  z-index: 111112;
+  margin: 4px;
+  padding: 5px 0;
+  background: white;
+  border: 1px solid #dbdbdb;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  box-sizing: border-box;
+  min-width: 160px;
+  overflow: auto; }
+  .se-popup-menu.se-popup-menu-left-bottom {
+    margin-top: 0;
+    margin-left: -4px; }
+    .se-popup-menu.se-popup-menu-right-bottom {
+      margin-top: 0; }
+      .se-popup-menu.se-popup-menu-top-left {
+        margin-top: -4px;
+        margin-left: 0; }
+        .se-popup-menu.se-popup-menu-top-right {
+          margin-top: -4px;
+          margin-left: 0; }
+          .se-popup-menu.se-popup-menu-bottom-left {
+            margin-left: 0; }
+            .se-popup-menu.se-popup-menu-bottom-right {
+              margin-left: 0; }
+              .se-popup-menu.se-popup-submenu {
+                margin: 0; }
+                .se-popup-menu > hr, .se-popup-menu > .divider {
+                  display: block;
+                  height: 1px;
+                  margin: 9px 0 10px 0;
+                  background-color: #dbdbdb;
+                  border: none; }
+
+.se-popup-menu-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  color: #333; }
+  .se-popup-menu-item .se-popup-menu-item-thumbnail {
+    padding-right: 5px;
+    width: 20px;
+    text-align: center; }
+    .se-popup-menu-item .se-popup-menu-item-body .se-popup-menu-item-title {
+      white-space: nowrap; }
+      .se-popup-menu-item .se-popup-menu-item-body .se-popup-menu-item-description {
+        font-size: 12px;
+        line-height: 18px;
+        font-weight: 400;
+        color: #777; }
+
+.se-popup-menu-item:focus {
+  outline: none; }
+
+  .se-popup-menu-item.submenu:after {
+    position: absolute;
+    content: " ";
+    top: 10px;
+    right: 5px;
+    border: 5px solid transparent;
+    border-right-width: 0;
+    border-left-width: 5px;
+    border-left-color: #dbdbdb; }
+
+.se-popup-menu-item.active {
+  background: #418cc8;
+  color: #FFF; }
+  .se-popup-menu-item.active .se-popup-menu-item-body .se-popup-menu-item-description {
+    color: #FFF; }
+
+.se-popup-menu-item:focus {
+  box-shadow: inset 0px 0px 2px 2px rgba(82, 168, 236, 0.6);
+  border-radius: 2px; }
+
+  .se-popup-menu-item.submenu.active:after {
+    border-left-color: #FFF; }
+
+.se-popup-menu-item.disabled {
+  cursor: default; }
