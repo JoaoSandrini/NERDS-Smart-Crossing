@@ -1,6 +1,6 @@
 services:
     ngsi-proxy:
-        image: fiware/ngsiproxy
+        image: fiware/ngsiproxy:dev
         hostname: ngsi-proxy
         container_name: ngsi-proxy
         expose:

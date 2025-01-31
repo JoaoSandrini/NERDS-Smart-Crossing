@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<widget xmlns="http://wirecloud.conwet.fi.upm.es/ns/macdescription/1" vendor="CoNWeT" name="spy-wiring" version="1.0.2">
+  <details>
+    <title>Spy Wiring</title>
+    <email>mgarcia@conwet.com</email>
+    <description>Capture wiring events, modify them or/and replay them</description>
+    <longdescription>DESCRIPTION.md</longdescription>
+    <authors>Miguel Garcia Lafuente &lt;mgarcia@conwet.com&gt;</authors>
+    <image>images/catalogue.png</image>
+    <smartphoneimage>images/catalogueSmartphone.png</smartphoneimage>
+    <license>Apache License 2.0</license>
+    <licenseurl>http://www.apache.org/licenses/LICENSE-2.0.html</licenseurl>
+    <homepage>https://github.com/Wirecloud/spy-wiring-widget</homepage>
+    <issuetracker>https://github.com/Wirecloud/spy-wiring-widget/issues</issuetracker>
+    <changelog>doc/changelog.md</changelog>
+    <doc>doc/userguide.md</doc>
+  </details>
+  <requirements>
+      <feature name="StyledElements"/>
+  </requirements>
+  <wiring>
+    <inputendpoint name="textinput" type="text" label="Input" description="Data to be analyzed" friendcode="*"/>
+    <outputendpoint name="textoutput" type="text" label="Output" description="" friendcode="*"/>
+  </wiring>
+  <preferences>
+    <preference name="recording" label="Start recording" description="Start the widget in recording mode" type="boolean" default="false"/>
+  </preferences>
+  <contents src="index.html" useplatformstyle="true"/>
+  <rendering height="470px" width="25%"/>
+</widget>

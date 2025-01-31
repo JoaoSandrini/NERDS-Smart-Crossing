@@ -1,0 +1,106 @@
+@font-face {
+  font-family: 'Comfortaa';
+  font-style: normal;
+  font-weight: normal;
+  src: local('Comfortaa'), local('Comfortaa-Regular'),
+    url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_regular-webfont.eot?&ea2be28bc6cd#iefix") format("embedded-opentype"),
+    url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_regular-webfont.woff?be8a45ae1fe6") format("woff"),
+    url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_regular-webfont.ttf?be8a45ae1fe6") format("truetype"),
+    url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_regular-webfont.svg?be8a45ae1fe6#ComfortaaRegular") format("svg"); }
+
+  @font-face {
+    font-family: 'Comfortaa';
+    font-style: normal;
+    font-weight: bold;
+    src: local('Comfortaa Bold'), local('Comfortaa-Bold'),
+        url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_bold-webfont.eot?&be8a45ae1fe6#iefix") format("embedded-opentype"),
+        url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_bold-webfont.woff?28f985aedc2f") format("woff"),
+        url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_bold-webfont.ttf?28f985aedc2f") format("truetype"),
+        url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_bold-webfont.svg?28f985aedc2f#ComfortaaBold") format("svg"); }
+
+    @font-face {
+      font-family: 'Open Sans';
+      font-style: normal;
+      font-weight: normal;
+      src: local('Open Sans'), local('OpenSans'),
+            url("/static/theme/wirecloud.defaulttheme/fonts/opensans-regular-webfont.eot?&be8a45ae1fe6#iefix") format("embedded-opentype"),
+            url("/static/theme/wirecloud.defaulttheme/fonts/opensans-regular-webfont.woff?28f985aedc2f") format("woff"),
+            url("/static/theme/wirecloud.defaulttheme/fonts/opensans-regular-webfont.ttf?28f985aedc2f") format("truetype"),
+            url("/static/theme/wirecloud.defaulttheme/fonts/opensans-regular-webfont.svg?28f985aedc2f#OpenSansRegular") format("svg"); }
+
+      @font-face {
+        font-family: 'Open Sans';
+        font-style: normal;
+        font-weight: bold;
+        src: local('Open Sans Bold'), local('OpenSansBold'),
+                url("/static/theme/wirecloud.defaulttheme/fonts/opensans-bold-webfont.eot?&be8a45ae1fe6#iefix") format("embedded-opentype"),
+                url("/static/theme/wirecloud.defaulttheme/fonts/opensans-bold-webfont.woff?28f985aedc2f") format("woff"),
+                url("/static/theme/wirecloud.defaulttheme/fonts/opensans-bold-webfont.ttf?be8a45ae1fe6") format("truetype"),
+                url("/static/theme/wirecloud.defaulttheme/fonts/opensans-bold-webfont.svg?28f985aedc2f#OpenSansRegular") format("svg"); }
+
+        body {
+          margin: 0;
+          padding: 0;
+          position: absolute;
+          top: 0;
+          right: 0;
+          bottom: 0;
+          left: 0; }
+
+          #loading-window, #loading-background {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 10000; }
+
+            #loading-background {
+              z-index: 3; }
+
+              #loading-window:not(.in) #loading-background {
+                display: none; }
+
+                #loading-window:not(.in) {
+                  opacity: 0;
+                  pointer-events: none;
+                  transition: none; }
+
+                  #loading-window.fade {
+                    transition: opacity 4s linear; }
+                    #loading-window.fade.in {
+                      transition: none; }
+
+#loading-message {
+  position: absolute;
+  right: 0px;
+  bottom: 0px;
+  width: 70%;
+  max-width: 100%;
+  z-index: 4;
+  margin: 4ex; }
+
+  #loading-subtask-title {
+    margin: 0; }
+
+    .window_menu .styled_form .notebook {
+      height: 400px; }
+
+      .parametrizable_input > * {
+        display: inline-block; }
+
+        .powered-by-wirecloud {
+          margin: 1px 5px; }
+
+          .powered-by-wirecloud:before {
+            content: 'Powered by ';
+            vertical-align: middle; }
+
+            .powered-by-wirecloud:after {
+              content: '';
+              display: inline-block;
+              vertical-align: middle;
+              width: 33px;
+              height: 20px;
+              background: url("/static/theme/wirecloud.defaulttheme/images/logos/wc1-mini.png?678528f20afe");
+              background-size: 33px 20px; }

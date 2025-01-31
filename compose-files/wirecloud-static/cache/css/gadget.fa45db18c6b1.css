@@ -1,0 +1,67 @@
+@font-face {
+  font-family: 'Comfortaa';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Comfortaa'), local('Comfortaa-Regular'),
+    url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_regular-webfont.eot?&ea2be28bc6cd#iefix") format("embedded-opentype"),
+    url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_regular-webfont.woff?be8a45ae1fe6") format("woff"),
+    url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_regular-webfont.ttf?be8a45ae1fe6") format("truetype"),
+    url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_regular-webfont.svg?be8a45ae1fe6#ComfortaaRegular") format("svg"); }
+
+  @font-face {
+    font-family: 'Comfortaa';
+    font-style: normal;
+    font-weight: 700;
+    src: local('Comfortaa Bold'), local('Comfortaa-Bold'),
+        url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_bold-webfont.eot?&be8a45ae1fe6#iefix") format("embedded-opentype"),
+        url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_bold-webfont.woff?28f985aedc2f") format("woff"),
+        url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_bold-webfont.ttf?28f985aedc2f") format("truetype"),
+        url("/static/theme/wirecloud.defaulttheme/fonts/comfortaa_bold-webfont.svg?28f985aedc2f#ComfortaaBold") format("svg"); }
+
+    @font-face {
+      font-family: 'Open Sans';
+      font-style: normal;
+      font-weight: normal;
+      src: local('Open Sans'), local('OpenSans'),
+            url("/static/theme/wirecloud.defaulttheme/fonts/opensans-regular-webfont.eot?&be8a45ae1fe6#iefix") format("embedded-opentype"),
+            url("/static/theme/wirecloud.defaulttheme/fonts/opensans-regular-webfont.woff?28f985aedc2f") format("woff"),
+            url("/static/theme/wirecloud.defaulttheme/fonts/opensans-regular-webfont.ttf?28f985aedc2f") format("truetype"),
+            url("/static/theme/wirecloud.defaulttheme/fonts/opensans-regular-webfont.svg?28f985aedc2f#OpenSansRegular") format("svg"); }
+
+      @font-face {
+        font-family: 'Open Sans';
+        font-style: normal;
+        font-weight: bold;
+        src: local('Open Sans'), local('OpenSans'),
+                url("/static/theme/wirecloud.defaulttheme/fonts/opensans-bold-webfont.eot?&be8a45ae1fe6#iefix") format("embedded-opentype"),
+                url("/static/theme/wirecloud.defaulttheme/fonts/opensans-bold-webfont.woff?28f985aedc2f") format("woff"),
+                url("/static/theme/wirecloud.defaulttheme/fonts/opensans-bold-webfont.ttf?be8a45ae1fe6") format("truetype"),
+                url("/static/theme/wirecloud.defaulttheme/fonts/opensans-bold-webfont.svg?28f985aedc2f#OpenSansRegular") format("svg"); }
+
+        @font-face {
+          font-family: "FontAwesome";
+          src: url('/static/theme/wirecloud.defaulttheme/fonts/fontawesome-webfont.eot');
+          src: url('/static/theme/wirecloud.defaulttheme/fonts/fontawesome-webfont.eot?#iefix') format('eot'),
+                    url('/static/theme/wirecloud.defaulttheme/fonts/fontawesome-webfont.woff') format('woff'),
+                    url('/static/theme/wirecloud.defaulttheme/fonts/fontawesome-webfont.ttf') format('truetype'),
+                    url('/static/theme/wirecloud.defaulttheme/fonts/fontawesome-webfont.svg#FontAwesome') format('svg');
+          font-weight: normal;
+          font-style: normal; }
+
+          html, body {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+            position: absolute; }
+
+            body {
+              color: #333;
+              font-family: "Open Sans"; }
+
+              .warning table {
+                background: transparent; }
+
+                .warning table td {
+                  border: none; }

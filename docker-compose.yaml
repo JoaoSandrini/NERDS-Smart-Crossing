@@ -1,6 +1,6 @@
 include:
   - ./compose-files/wirecloud-compose.yaml
   - ./compose-files/keyrock-compose.yaml
-  - ./compose-files/pep-proxy-compose.yaml
+  #- ./compose-files/pep-proxy-compose.yaml
   - ./compose-files/scorpio-compose.yaml
   - ./compose-files/ngsi-proxy-compose.yaml
